@@ -1,0 +1,23 @@
+# 密钥（绝对不能提交）
+.env
+*.env
+application-local.yml
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Maven
+target/
+
+# Node
+node_modules/
+dist/
+
+# Docker
+mysql_data/
+
+# OS
+.DS_Store
+Thumbs.db

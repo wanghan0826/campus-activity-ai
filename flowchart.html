@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>xxx — 功能流程图 V2</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #f8f9fb;
+    --card-bg: #ffffff;
+    --text: #1a1a2e;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --accent: #4f46e5;
+    --tag-rule: #f0fdf4;
+    --tag-ai: #ede9fe;
+    --tag-wechat: #fff7ed;
+    --tag-rule-text: #166534;
+    --tag-ai-text: #6b21a8;
+    --tag-wechat-text: #9a3412;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 24px;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+
+  header { text-align: center; padding: 48px 0 32px; }
+  header h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; }
+  header p { color: var(--muted); margin-top: 8px; font-size: 0.95rem; }
+
+  .legend {
+    display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 40px;
+  }
+  .legend span {
+    padding: 4px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;
+  }
+  .legend .rule { background: var(--tag-rule); color: var(--tag-rule-text); border: 1px solid #bbf7d0; }
+  .legend .ai { background: var(--tag-ai); color: var(--tag-ai-text); border: 1px solid #d8b4fe; }
+  .legend .wechat { background: var(--tag-wechat); color: var(--tag-wechat-text); border: 1px solid #fed7aa; }
+
+  .section {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 16px; margin-bottom: 28px; overflow: hidden;
+  }
+  .section-header {
+    padding: 20px 28px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .section-num {
+    width: 32px; height: 32px; border-radius: 8px; background: var(--accent);
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.9rem; flex-shrink: 0;
+  }
+  .section-header h2 { font-size: 1.1rem; font-weight: 600; }
+  .badge {
+    font-size: 0.72rem; padding: 2px 10px; border-radius: 12px; font-weight: 600;
+  }
+  .badge.rule { background: var(--tag-rule); color: var(--tag-rule-text); }
+  .badge.ai { background: var(--tag-ai); color: var(--tag-ai-text); }
+  .badge.wechat { background: var(--tag-wechat); color: var(--tag-wechat-text); }
+
+  .section-body { padding: 24px 16px 8px; }
+  .mermaid { display: flex; justify-content: center; overflow-x: auto; padding-bottom: 16px; }
+  .mermaid svg { max-width: 100%; height: auto; }
+
+  .integration-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+    gap: 10px;
+    padding: 20px 28px;
+  }
+  .int-card {
+    border: 1px solid var(--border); border-radius: 10px; padding: 16px;
+    text-align: center;
+  }
+  .int-card .icon { font-size: 1.5rem; margin-bottom: 6px; }
+  .int-card h4 { font-size: 0.9rem; margin-bottom: 2px; }
+  .int-card p { font-size: 0.75rem; color: var(--muted); }
+
+  footer { text-align: center; color: var(--muted); font-size: 0.8rem; padding: 32px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>🏫 xxx — 功能流程图 V2</h1>
+  <p>简化版：规则做判断 · AI 做润色 · 企微做通道</p>
+</header>
+
+<div class="legend">
+  <span class="rule">📏 规则判断（代码 if/else）</span>
+  <span class="ai">🤖 AI 辅助（大模型）</span>
+  <span class="wechat">🔗 企业微信联动</span>
+</div>
+
+<!-- ==================== 企业微信联动点 ==================== -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">🔗</span>
+    <h2>与企业微信 / 信息中心的 7 个联动模块</h2>
+  </div>
+  <div class="integration-grid">
+    <div class="int-card">
+      <div class="icon">🔐</div>
+      <h4>OAuth 身份认证</h4>
+      <p>打开应用即登录<br/>自动获取姓名/部门/职位</p>
+    </div>
+    <div class="int-card">
+      <div class="icon">📋</div>
+      <h4>审批引擎</h4>
+      <p>发起审批 → 企微接管<br/>通知/流转/催办全自动</p>
+    </div>
+    <div class="int-card">
+      <div class="icon">📬</div>
+      <h4>消息推送</h4>
+      <p>活动通知 · 签到链接<br/>催签提醒 · 证书推送</p>
+    </div>
+    <div class="int-card">
+      <div class="icon">📇</div>
+      <h4>通讯录读取</h4>
+      <p>查学生班级学号<br/>查教师部门 · 审批链</p>
+    </div>
+    <div class="int-card">
+      <div class="icon">📅</div>
+      <h4>日程同步</h4>
+      <p>报名成功自动加日程<br/>活动前自动提醒</p>
+    </div>
+    <div class="int-card">
+      <div class="icon">📍</div>
+      <h4>签到 IP 检测</h4>
+      <p>传 IP → 返回是否在范围内<br/>由信息中心提供</p>
+    </div>
+    <div class="int-card">
+      <div class="icon">🔄</div>
+      <h4>回调接收</h4>
+      <p>审批结果回调<br/>学生消息回调</p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 总览 ==================== -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">总</span>
+    <h2>全流程总览：成功发布 = 要素填齐 → 审批通过 → 已发布</h2>
+  </div>
+  <div class="section-body">
+    <div class="mermaid">
+graph LR
+    A["🎯 创建活动<br/><small>文档 → AI 提取 → 要素检查</small>"] --> B["📋 审批<br/><small>企微审批引擎</small>"]
+    B --> C["📣 通知 & 报名<br/><small>企微消息推送</small>"]
+    C --> D["📍 签到<br/><small>IP检测 + 企微消息</small>"]
+    D --> E["🏆 反馈 & 证书<br/><small>AI解析 + 企微推送</small>"]
+    E -.->|"数据回流"| A
+
+    style A fill:#dbeafe,stroke:#3b82f6,color:#1e40af
+    style B fill:#fff7ed,stroke:#ea580c,color:#9a3412
+    style C fill:#d1fae5,stroke:#10b981,color:#065f46
+    style D fill:#d1fae5,stroke:#10b981,color:#065f46
+    style E fill:#ede9fe,stroke:#8b5cf6,color:#6b21a8
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 阶段一：创建活动 ==================== -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">1</span>
+    <h2>创建活动</h2>
+    <span class="badge rule">规则判断</span>
+    <span class="badge ai">AI 辅助</span>
+  </div>
+  <div class="section-body">
+    <div class="mermaid">
+graph TD
+    A["👨‍🏫 教师打开应用"] --> B["📄 粘贴提前准备好的<br/>活动大纲/文档"]
+
+    B --> C["🤖 AI 解析文档<br/>提取并结构化："]
+
+    C --> C1["📋 活动基本信息<br/>━━━━━━━━━━<br/>· 活动标题<br/>· 活动分类（AI判断）<br/>  艺术类/艺体类/实践类/<br/>  生活类/特色类<br/>· 校区<br/>· 活动地点<br/>· 组织者<br/>· 🎨 封面图片<br/>· 📝 活动内容"]
+
+    C --> C2["🕐 时间信息<br/>━━━━━━━━━━<br/>· 活动开始/结束时间<br/>· 报名开始/结束时间<br/>· 上架/下架时间"]
+
+    C --> C3["👥 其他信息<br/>━━━━━━━━━━<br/>· 最大报名人数<br/>· 宣传品审核状态（如有）"]
+
+    C1 --> D
+    C2 --> D
+    C3 --> D
+
+    D["📏 系统自动匹配<br/>━━━━━━━━━━<br/>· 审核部门（查组织架构）<br/>· 审核老师（查组织架构）<br/>· 分管领导（查组织架构）"]
+
+    D --> E{"📏 要素检查<br/><small>纯规则：必填项是否有值？</small>"}
+
+    E -->|"❌ 有缺失"| E2["提示：缺少哪些要素<br/>教师补充"]
+    E2 --> C
+
+    E -->|"✅ 要素齐全"| F["📋 AI 生成活动预览<br/><small>教师查看、可修改任意内容</small>"]
+
+    F --> G["📤 确认创建"]
+    G --> H["→ 进入审批流程"]
+
+    style C fill:#ede9fe,stroke:#8b5cf6,color:#6b21a8
+    style C1 fill:#ede9fe,stroke:#8b5cf6,color:#6b21a8
+    style C2 fill:#ede9fe,stroke:#8b5cf6,color:#6b21a8
+    style C3 fill:#ede9fe,stroke:#8b5cf6,color:#6b21a8
+    style D fill:#f0fdf4,stroke:#16a34a,color:#166534
+    style E fill:#f0fdf4,stroke:#16a34a,color:#166534
+    style F fill:#dbeafe,stroke:#3b82f6,color:#1e40af
+    style B fill:#dbeafe,stroke:#3b82f6,color:#1e40af
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 阶段二：审批 ==================== -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">2</span>
+    <h2>审批（企微审批引擎）</h2>
+    <span class="badge rule">规则判断</span>
+    <span class="badge wechat">企微-审批</span>
+  </div>
+  <div class="section-body">
+    <div class="mermaid">
+graph TD
+    A["📤 教师提交审批"] --> B["📏 规则匹配审批链<br/><small>查通讯录：教师部门 → 对应审批人</small>"]
+
+    B --> C["🔗 调用企微审批 API<br/><small>发起审批单</small>"]
+
+    C --> D["🏢 企微审批引擎接管<br/>━━━━━━━━━━<br/>· 自动推送通知给审批人<br/>· 多级审批自动流转<br/>· 超时自动催办<br/>· 审批记录存档<br/><small>↑ 以上全是企微自带能力，我们不用写</small>"]
+
+    D --> E{"审批结果"}
+
+    E -->|"✅ 通过"| F["🔗 收到审批完成回调<br/>活动状态 → 已发布"]
+    E -->|"❌ 驳回"| G["通知教师<br/>附驳回理由<br/>教师修改后重新提交"]
+    G --> A
+
+    F --> H["→ 进入通知 & 报名"]
+
+    style B fill:#f0fdf4,stroke:#16a34a,color:#166534
+    style C fill:#fff7ed,stroke:#ea580c,color:#9a3412
+    style D fill:#fff7ed,stroke:#ea580c,color:#9a3412
+    style F fill:#fff7ed,stroke:#ea580c,color:#9a3412
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 阶段三：通知 & 报名 ==================== -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">3</span>
+    <h2>通知 & 学生报名</h2>
+    <span class="badge rule">规则判断</span>
+    <span class="badge ai">AI 辅助</span>
+    <span class="badge wechat">企微-消息/通讯录/日程</span>
+  </div>
+  <div class="section-body">
+    <div class="mermaid">
+graph TD
+    A["📣 活动已发布"] --> B["🔗 企微消息推送<br/><small>向目标学生发送活动通知</small>"]
+
+    B --> C["💬 学生收到通知<br/><small>活动信息 + 报名入口</small>"]
+
+    C --> D{"学生在聊天框操作"}
+
+    D -->|"💬 『报名』"| E["📏 规则校验<br/><small>· 名额已满？→ 拒绝<br/>· 重复报名？→ 提示<br/>· 通过 → 继续</small>"]
+
+    E --> F["🔗 企微通讯录<br/><small>自动拉取：姓名/班级/学号</small>"]
+    F --> G["✅ 报名成功"]
+    G --> H["🔗 企微日程<br/><small>自动添加活动日程</small>"]
+
+    D -->|"💬 『取消报名』"| I["📏 规则判断<br/><small>距活动 >24h → 允许<br/>距活动 ≤24h → 提示信用分</small>"]
+    I --> J["✅ 取消成功<br/><small>名额自动释放</small>"]
+
+    D -->|"💬 『不感兴趣』"| K["📏 记录偏好<br/><small>后续推荐过滤</small>"]
+
+    G --> L["📏 名额监测<br/><small>仅剩少量 → AI 紧迫感推送</small>"]
+
+    style E fill:#f0fdf4,stroke:#16a34a,color:#166534
+    style I fill:#f0fdf4,stroke:#16a34a,color:#166534
+    style L fill:#f0fdf4,stroke:#16a34a,color:#166534
+    style B fill:#fff7ed,stroke:#ea580c,color:#9a3412
+    style F fill:#fff7ed,stroke:#ea580c,color:#9a3412
+    style H fill:#fff7ed,stroke:#ea580c,color:#9a3412
+    style G fill:#d1fae5,stroke:#10b981,color:#065f46
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 阶段四：签到 ==================== -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">4</span>
+    <h2>签到</h2>
+    <span class="badge rule">规则判断</span>
+    <span class="badge wechat">企微-消息 / 信息中心-IP检测</span>
+  </div>
+  <div class="section-body">
+    <div class="mermaid">
+graph TD
+    A["⏰ 活动前 30 分钟"] --> B["🔗 企微消息推送<br/><small>签到链接 + 二维码</small>"]
+
+    B --> C["📍 学生点击签到"]
+    C --> D["📏 信息中心 IP 检测<br/><small>IP 在签到范围内？</small>"]
+
+    D -->|"✅ 通过"| E["✅ 签到成功"]
+    D -->|"❌ 未通过"| F["提示：不在签到范围"]
+
+    E --> G["📊 教师端<br/><small>企微消息卡片实时更新<br/>已签到：87/120</small>"]
+
+    G --> H["⏰ 活动开始 15 分钟后"]
+    H --> I{"📏 扫描未签到学生"}
+
+    I -->|"全部签到"| J["✅ 闭环"]
+    I -->|"有未签到"| K["🔗 企微消息催签<br/><small>自动推送签到链接</small>"]
+
+    K --> L{"仍无响应？"}
+    L -->|"签到"| E
+    L -->|"持续无响应"| M["📏 活动结束<br/>未签到 → 标记旷签"]
+
+    M --> J
+
+    style D fill:#f0fdf4,stroke:#16a34a,color:#166534
+    style I fill:#f0fdf4,stroke:#16a34a,color:#166534
+    style M fill:#f0fdf4,stroke:#16a34a,color:#166534
+    style B fill:#fff7ed,stroke:#ea580c,color:#9a3412
+    style G fill:#fff7ed,stroke:#ea580c,color:#9a3412
+    style K fill:#fff7ed,stroke:#ea580c,color:#9a3412
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 阶段五：反馈 & 证书 ==================== -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">5</span>
+    <h2>反馈 & 证书闭环</h2>
+    <span class="badge ai">AI 辅助</span>
+    <span class="badge wechat">企微-消息</span>
+  </div>
+  <div class="section-body">
+    <div class="mermaid">
+graph TD
+    A["🏁 活动结束"] --> B["🔗 企微消息推送<br/><small>向参与者发送反馈邀请</small>"]
+
+    B --> C["💬 学生自然语言回复感受"]
+    C --> D["🤖 AI 语义解析<br/><small>情绪识别 + 关键词提取</small>"]
+
+    D --> E["📊 教师端反馈汇总<br/><small>情绪分布 · 关键词 · AI建议</small>"]
+    D --> F["🤖 AI 生成参与证书<br/><small>获奖信息自动填入</small>"]
+
+    F --> G["🔗 企微推送证书图片"]
+    G --> H["🔄 数据回流<br/><small>兴趣标签更新 → 下次推荐更准</small>"]
+
+    style D fill:#ede9fe,stroke:#8b5cf6,color:#6b21a8
+    style F fill:#ede9fe,stroke:#8b5cf6,color:#6b21a8
+    style B fill:#fff7ed,stroke:#ea580c,color:#9a3412
+    style G fill:#fff7ed,stroke:#ea580c,color:#9a3412
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 端到端时序 ==================== -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">⟐</span>
+    <h2>端到端时序总览</h2>
+  </div>
+  <div class="section-body">
+    <div class="mermaid">
+sequenceDiagram
+    actor T as 👨‍🏫 教师
+    participant WX as 🔗 企业微信
+    participant APP as 💻 我们的后端
+    participant AI as 🤖 AI
+    actor S as 🎓 学生
+
+    Note over T, S: ── 创建活动 ──
+
+    T->>APP: 粘贴活动大纲/文档
+    APP->>AI: 解析文档，提取结构化信息
+    AI->>APP: 返回标题/时间/地点/人员/描述/封面/流程/物料/预算
+    APP->>APP: 📏 要素检查（必填项有值？）
+    APP->>T: 展示 AI 生成的活动预览
+    T->>APP: 可修改，确认创建
+
+    Note over T, S: ── 审批（企微审批引擎）──
+
+    APP->>APP: 📏 规则匹配审批链
+    APP->>WX: 调用审批 API 发起审批
+    WX->>WX: 🏢 企微接管：通知/流转/催办
+    WX->>APP: 审批完成回调
+    APP->>APP: 活动状态 → 已发布
+
+    Note over T, S: ── 通知 & 报名 ──
+
+    APP->>WX: 消息推送 API
+    WX->>S: 💬 活动通知
+    S->>WX: 💬 回复『报名』
+    WX->>APP: 回调：学生消息
+    APP->>APP: 📏 名额/重复校验
+    APP->>WX: 通讯录 API 拉取学生信息
+    APP->>WX: 日程 API 添加日程
+    APP->>WX: 消息：报名成功
+    WX->>S: ✅ 报名成功 + 日程
+
+    Note over T, S: ── 签到 ──
+
+    APP->>WX: 消息：签到链接
+    WX->>S: 🔗 签到链接
+    S->>APP: 点击签到
+    APP->>APP: 📏 调信息中心 IP 检测接口
+    APP->>WX: 消息卡片：签到动态更新
+    WX->>T: 📊 已签到 87/120
+    APP->>WX: (未签到) 催签消息
+    APP->>APP: 📏 活动结束 → 旷签标记
+
+    Note over T, S: ── 反馈 & 证书 ──
+
+    APP->>WX: 消息：反馈邀请
+    WX->>S: 💬 给活动打个分呗
+    S->>WX: 回复感受
+    WX->>APP: 回调：学生回复
+    APP->>AI: 语义解析
+    AI->>APP: 情绪+关键词
+    APP->>AI: 生成证书
+    AI->>APP: 证书图片
+    APP->>WX: 推送证书
+    WX->>S: 📜 证书
+    APP->>T: 📊 反馈汇总
+    </div>
+  </div>
+</div>
+
+<footer>
+  V2 原则：规则做判断 · AI 做润色 · 企微/信息中心做通道 · 审批无缝对接
+</footer>
+
+</div>
+
+<script>
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'neutral',
+  themeVariables: {
+    'fontFamily': '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif',
+    'fontSize': '14px',
+    'darkColor': '#1e293b',
+    'darkSecondaryColor': '#334155',
+  },
+  flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis', padding: 20, nodeSpacing: 30, rankSpacing: 40 },
+  sequence: { useMaxWidth: true, boxMargin: 8, mirrorActors: false, bottomMarginAdj: 2, messageMargin: 35, boxTextMargin: 8, noteMargin: 12 }
+});
+</script>
+</body>
+</html>
