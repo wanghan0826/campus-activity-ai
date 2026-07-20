@@ -37,6 +37,34 @@ git clone https://github.com/toTaels/campus-activity.git
 cd campus-activity
 ```
 
+---
+
+## Git 操作指南（不会也要看）
+
+每个人只需要记四条命令：
+
+```bash
+# 每天开始写代码前：拉取最新代码
+git pull
+
+# 写完一个功能后：保存 + 上传
+git add .                          # 暂存所有改动
+git commit -m "写清楚你改了什么"    # 提交（引号里用中文描述）
+git push                           # 上传到 GitHub
+```
+
+**绝对不能做的事：**
+
+| ❌ 禁止 | 原因 |
+|--------|------|
+| `git push -f` 或 `--force` | 会删掉别人的代码 |
+| 改别人写的文件 | 冲突了很麻烦，只动自己的 |
+| 提交 `.env`、`.idea/`、`target/` | 已在 `.gitignore` 里排除了，正常情况下提不上去 |
+
+**遇到报错怎么办：**
+- 截图发到群里，不要自己乱敲命令
+- 最常见的错：忘了先 `git pull`，push 时提示冲突。解决：先 `git pull`，再 `git push`
+
 ### 3. 起数据库
 
 ```bash
