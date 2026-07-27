@@ -4,25 +4,39 @@
 
 CREATE TABLE IF NOT EXISTS activity (
     id               BIGINT PRIMARY KEY AUTO_INCREMENT,
-    title            VARCHAR(200)  NOT NULL COMMENT '活动标题',
-    category         VARCHAR(20)   NOT NULL COMMENT '活动分类: ART/SPORTS/PRACTICE/LIFE/FEATURE',
+    title            VARCHAR(200)  COMMENT '活动标题，草稿阶段允许为空',
+    category         VARCHAR(20)   COMMENT '活动分类: ART/SPORTS/PRACTICE/LIFE/FEATURE',
     campus           VARCHAR(100)  COMMENT '校区',
-    location         VARCHAR(200)  NOT NULL COMMENT '活动地点',
+    location         VARCHAR(200)  COMMENT '活动地点，草稿阶段允许为空',
     organizer        VARCHAR(100)  COMMENT '组织者',
     cover_image      VARCHAR(500)  COMMENT '封面图片URL',
-    content          TEXT          NOT NULL COMMENT '活动内容（AI润色后）',
+    cover_image_prompt VARCHAR(500) COMMENT 'AI封面图提示词',
+    content          TEXT          COMMENT '活动内容（AI润色后）',
     raw_document     TEXT          COMMENT '教师提交的原始文档',
-    start_time       DATETIME      NOT NULL COMMENT '活动开始时间',
-    end_time         DATETIME      NOT NULL COMMENT '活动结束时间',
+    creation_mode    VARCHAR(20)   NOT NULL DEFAULT 'AI' COMMENT 'AI/MANUAL',
+    target_audience  VARCHAR(300)  COMMENT '活动面向对象',
+    contact_info     VARCHAR(200)  COMMENT '联系人及联系方式',
+    start_time       DATETIME      COMMENT '活动开始时间，草稿阶段允许为空',
+    end_time         DATETIME      COMMENT '活动结束时间，草稿阶段允许为空',
     reg_start_time   DATETIME      COMMENT '报名开始时间',
     reg_end_time     DATETIME      COMMENT '报名结束时间',
     publish_time     DATETIME      COMMENT '上架时间（学生可见）',
     offline_time     DATETIME      COMMENT '下架时间',
     max_participants INT           COMMENT '最大报名人数',
+    budget           DECIMAL(12,2) COMMENT '预估预算',
+    registration_required BOOLEAN  DEFAULT TRUE COMMENT '是否需要报名',
+    registration_approval_required BOOLEAN DEFAULT FALSE COMMENT '报名是否需要审核',
+    recognition_type VARCHAR(20)   NOT NULL DEFAULT 'NONE' COMMENT 'NONE/CREDIT/VOLUNTEER/BOTH',
+    second_class_credits DECIMAL(6,2) COMMENT '第二课堂学分',
+    volunteer_hours  DECIMAL(6,2)  COMMENT '志愿服务时长',
+    check_in_mode    VARCHAR(20)   NOT NULL DEFAULT 'QR' COMMENT 'QR/MANUAL/NONE',
+    participation_requirements VARCHAR(500) COMMENT '参与及认定要求',
     review_dept      VARCHAR(100)  COMMENT '审核部门（系统匹配）',
     review_teacher   VARCHAR(100)  COMMENT '审核老师（系统匹配）',
     review_leader    VARCHAR(100)  COMMENT '分管领导（系统匹配）',
     promo_approved   BOOLEAN       COMMENT '宣传品是否已通过审核',
+    approval_message VARCHAR(500)  COMMENT '提交审批时的附加留言',
+    submitted_at     DATETIME      COMMENT '提交审批时间',
     status           VARCHAR(20)   NOT NULL DEFAULT 'DRAFT' COMMENT 'DRAFT/PENDING_APPROVAL/APPROVED/PUBLISHED/OFFLINE/REJECTED',
     creator_id       VARCHAR(100)  NOT NULL COMMENT '创建人userid',
     created_at       DATETIME      DEFAULT CURRENT_TIMESTAMP,
@@ -33,3 +47,20 @@ CREATE TABLE IF NOT EXISTS activity (
     INDEX idx_creator (creator_id),
     INDEX idx_start_time (start_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='活动表';
+
+CREATE TABLE IF NOT EXISTS activity_schedule (
+    activity_id      BIGINT       NOT NULL,
+    sort_order       INT          NOT NULL,
+    schedule_time    VARCHAR(100),
+    schedule_content VARCHAR(500),
+    PRIMARY KEY (activity_id, sort_order),
+    CONSTRAINT fk_schedule_activity FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS activity_material (
+    activity_id BIGINT       NOT NULL,
+    sort_order  INT          NOT NULL,
+    material    VARCHAR(200),
+    PRIMARY KEY (activity_id, sort_order),
+    CONSTRAINT fk_material_activity FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

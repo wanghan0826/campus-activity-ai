@@ -5,6 +5,8 @@ const api = axios.create({
   timeout: 60000,
   headers: {
     'Content-Type': 'application/json',
+    // 企业微信登录接入前的本地身份占位，正式环境由登录态提供。
+    'X-User-Id': 'test_teacher_001',
   },
 })
 
@@ -18,6 +20,37 @@ export async function createActivity(result) {
   return data
 }
 
+export async function updateActivity(id, result) {
+  const { data } = await api.put(`/activities/${id}`, result)
+  return data
+}
+
+export async function getActivities({ status = 'ALL', keyword = '', page = 0, size = 20 } = {}) {
+  const { data } = await api.get('/activities', {
+    params: { status: status === 'ALL' ? undefined : status, keyword: keyword || undefined, page, size },
+  })
+  return data
+}
+
+export async function getActivityStats() {
+  const { data } = await api.get('/activities/stats')
+  return data
+}
+
+export async function submitActivity(id, message = '') {
+  const { data } = await api.post(`/activities/${id}/submit`, { message })
+  return data
+}
+
+export async function duplicateActivity(id) {
+  const { data } = await api.post(`/activities/${id}/duplicate`)
+  return data
+}
+
+export async function deleteActivity(id) {
+  await api.delete(`/activities/${id}`)
+}
+
 export function getApiErrorMessage(error, fallback = '请求失败，请稍后重试') {
   if (!error.response) {
     return error.code === 'ECONNABORTED'
@@ -27,5 +60,5 @@ export function getApiErrorMessage(error, fallback = '请求失败，请稍后�
 
   const body = error.response.data
   if (typeof body === 'string' && body.trim()) return body
-  return body?.message || body?.error || fallback
+  return body?.detail || body?.message || body?.error || fallback
 }

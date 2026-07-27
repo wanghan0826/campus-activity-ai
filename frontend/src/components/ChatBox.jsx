@@ -8,7 +8,14 @@ const SendIcon = () => (
   </svg>
 )
 
-export default function ChatBox({ onSubmit, onParsed, onError, disabled = false }) {
+export default function ChatBox({
+  onSubmit,
+  onParsed,
+  onError,
+  disabled = false,
+  contextDocument = '',
+  placeholder = '请粘贴活动大纲或文档...',
+}) {
   const [document, setDocument] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -16,12 +23,16 @@ export default function ChatBox({ onSubmit, onParsed, onError, disabled = false 
     const value = document.trim()
     if (!value || loading || disabled) return
 
+    const requestDocument = contextDocument
+      ? `${contextDocument}\n\n教师补充信息：${value}`
+      : value
+
     setLoading(true)
     onError?.('')
     onSubmit?.(value)
     try {
-      const response = await parseDocument(value)
-      onParsed(response, value)
+      const response = await parseDocument(requestDocument)
+      onParsed(response, value, requestDocument)
       setDocument('')
     } catch (error) {
       onError?.(getApiErrorMessage(error, 'AI 解析失败，请稍后重试'))
@@ -49,7 +60,7 @@ export default function ChatBox({ onSubmit, onParsed, onError, disabled = false 
             value={document}
             onChange={(event) => setDocument(event.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="请粘贴活动大纲或文档..."
+            placeholder={placeholder}
             rows={4}
             disabled={loading || disabled}
             className="max-h-60 min-h-24 w-full resize-y bg-transparent px-3 py-2 text-[15px] leading-7 text-stone-800 outline-none placeholder:text-stone-400 disabled:cursor-not-allowed"

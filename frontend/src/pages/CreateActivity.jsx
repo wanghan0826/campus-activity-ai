@@ -2,26 +2,36 @@ import { useEffect, useRef, useState } from 'react'
 import ActivityCard from '../components/ActivityCard.jsx'
 import ChatBox from '../components/ChatBox.jsx'
 
+const EMPTY_MANUAL_ACTIVITY = { creationMode: 'MANUAL', schedule: [], materials: [] }
+
+const FIELD_QUESTIONS = {
+  title: '这场活动准备使用什么标题？',
+  location: '活动安排在哪个场地？',
+  startTime: '活动具体从什么时候开始？',
+  endTime: '预计什么时候结束？',
+}
+
 const BotAvatar = () => (
-  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-600 text-sm font-bold text-white shadow-sm" aria-hidden="true">
-    AI
-  </div>
+  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-indigo-600 text-xs font-bold text-white shadow-sm" aria-hidden="true">AI</div>
 )
 
-export default function CreateActivity() {
+export default function CreateActivity({ editingActivity, onActivityChanged, onCancelEdit }) {
+  const [mode, setMode] = useState(editingActivity?.creationMode === 'MANUAL' ? 'MANUAL' : 'AI')
   const [parsedResponse, setParsedResponse] = useState(null)
   const [submittedDocument, setSubmittedDocument] = useState('')
   const [parseError, setParseError] = useState('')
   const latestMessageRef = useRef(null)
 
   useEffect(() => {
-    if (parsedResponse || parseError) {
-      latestMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
+    if (parsedResponse || parseError) latestMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [parsedResponse, parseError])
 
-  const handleParsed = (response, document) => {
-    setSubmittedDocument(document)
+  useEffect(() => {
+    setMode(editingActivity?.creationMode === 'MANUAL' ? 'MANUAL' : 'AI')
+  }, [editingActivity])
+
+  const handleParsed = (response, document, requestDocument) => {
+    setSubmittedDocument(requestDocument || document)
     setParsedResponse(response)
     setParseError('')
   }
@@ -37,72 +47,124 @@ export default function CreateActivity() {
     setParseError('')
   }
 
+  const switchMode = (nextMode) => {
+    setMode(nextMode)
+    setParsedResponse(null)
+    setSubmittedDocument('')
+    setParseError('')
+  }
+
   return (
-    <div className="flex min-h-screen flex-col bg-[#f7f7f5] text-stone-900">
-      <header className="sticky top-0 z-20 border-b border-stone-200/80 bg-[#f7f7f5]/90 px-4 py-3 backdrop-blur-xl sm:px-6">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-stone-900 text-lg text-white shadow-sm">校</div>
-            <div>
-              <h1 className="text-sm font-bold tracking-wide text-stone-900 sm:text-base">校园活动创建助手</h1>
-              <p className="text-xs text-stone-500">把文档交给 AI，快速整理活动信息</p>
-            </div>
+    <div className="mx-auto max-w-6xl px-4 py-7 sm:px-6 sm:py-10">
+      <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <div className="mb-2 flex items-center gap-2 text-xs font-bold text-indigo-600">
+            <span className="grid h-6 w-6 place-items-center rounded-lg bg-indigo-600 text-white">1</span>
+            教师端 · 活动创建
           </div>
-          <span className="hidden items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs text-stone-500 ring-1 ring-stone-200 sm:flex">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            智能解析
-          </span>
+          <h1 className="text-2xl font-bold tracking-tight text-stone-950 sm:text-3xl">
+            {editingActivity ? '继续完善活动方案' : '创建一个新活动'}
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-stone-500">AI 快速生成方案，也可以使用完整表单手动填写。</p>
         </div>
-      </header>
-
-      <main className="flex-1 px-4 py-8 sm:px-6 sm:py-10">
-        <div className="mx-auto max-w-4xl space-y-7">
-          <div className="flex items-start gap-3">
-            <BotAvatar />
-            <div className="max-w-2xl rounded-2xl rounded-tl-md border border-stone-200 bg-white px-4 py-3.5 text-sm leading-7 text-stone-700 shadow-sm">
-              你好！请把活动大纲、通知或策划文档粘贴到下方。我会帮你提取时间、地点、活动内容等信息，并生成一张可编辑的预览卡片。
-            </div>
-          </div>
-
-          {submittedDocument && (
-            <div className="flex justify-end">
-              <div className="max-w-2xl whitespace-pre-wrap rounded-2xl rounded-tr-md bg-emerald-600 px-4 py-3.5 text-sm leading-7 text-white shadow-sm">
-                {submittedDocument}
-              </div>
-            </div>
-          )}
-
-          <div ref={latestMessageRef}>
-            {parsedResponse && (
-              <div className="flex items-start gap-3">
-                <BotAvatar />
-                <div className="min-w-0 flex-1">
-                  <p className="mb-2 text-xs text-stone-500">
-                    已完成解析{parsedResponse.passed ? '，请确认以下信息' : '，部分必填信息需要补充'}
-                  </p>
-                  <ActivityCard
-                    parsedResult={parsedResponse.result || {}}
-                    missingFields={parsedResponse.missingFields || []}
-                  />
-                </div>
-              </div>
-            )}
-
-            {parseError && (
-              <div className="flex items-start gap-3">
-                <BotAvatar />
-                <div role="alert" className="max-w-2xl rounded-2xl rounded-tl-md border border-red-200 bg-red-50 px-4 py-3.5 text-sm text-red-700 shadow-sm">
-                  {parseError}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </main>
-
-      <div className="sticky bottom-0 z-20">
-        <ChatBox onSubmit={handleSubmit} onParsed={handleParsed} onError={handleError} />
+        {editingActivity && (
+          <button type="button" onClick={onCancelEdit} className="rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-sm font-semibold text-stone-600 hover:bg-stone-50">
+            退出编辑
+          </button>
+        )}
       </div>
+
+      {!editingActivity && (
+        <div className="mb-7 grid gap-3 sm:grid-cols-2">
+          <ModeCard active={mode === 'AI'} title="AI 快速创建" badge="推荐" description="输入一句话或粘贴活动文档，AI 自动整理方案。" onClick={() => switchMode('AI')} icon="✦" />
+          <ModeCard active={mode === 'MANUAL'} title="手动创建" description="使用传统完整表单，从空白方案开始填写。" onClick={() => switchMode('MANUAL')} icon="✎" />
+        </div>
+      )}
+
+      {editingActivity ? (
+        <ActivityCard parsedResult={editingActivity} creationMode={editingActivity.creationMode} onSaved={onActivityChanged} />
+      ) : mode === 'MANUAL' ? (
+        <ActivityCard parsedResult={EMPTY_MANUAL_ACTIVITY} creationMode="MANUAL" onSaved={onActivityChanged} />
+      ) : (
+        <div className="overflow-hidden rounded-[28px] border border-stone-200 bg-white shadow-sm">
+          <div className="space-y-7 px-4 py-6 sm:px-7 sm:py-8">
+            <div className="flex items-start gap-3">
+              <BotAvatar />
+              <div className="max-w-2xl rounded-2xl rounded-tl-md bg-indigo-50 px-4 py-3.5 text-sm leading-7 text-indigo-950 ring-1 ring-indigo-100">
+                告诉我活动类型、规模、时间和场景即可。例如：“下周五下午，初二学生趣味竞赛，120人，多功能厅，2小时”。信息不足时，我会提示你补充。
+              </div>
+            </div>
+
+            {submittedDocument && (
+              <div className="flex justify-end">
+                <div className="max-w-2xl whitespace-pre-wrap rounded-2xl rounded-tr-md bg-indigo-600 px-4 py-3.5 text-sm leading-7 text-white shadow-sm">{submittedDocument}</div>
+              </div>
+            )}
+
+            <div ref={latestMessageRef}>
+              {parsedResponse && (
+                <div className="space-y-5">
+                  {(parsedResponse.missingFields?.length > 0 || parsedResponse.clarificationQuestions?.length > 0) && (
+                    <div className="flex items-start gap-3">
+                      <BotAvatar />
+                      <div className="max-w-2xl rounded-2xl rounded-tl-md border border-amber-200 bg-amber-50 px-4 py-3.5 text-sm text-amber-900">
+                        <p className="font-semibold">方案已经生成，还需要确认：</p>
+                        <ul className="mt-2 list-disc space-y-1 pl-5 text-amber-800">
+                          {(parsedResponse.missingFields || []).map((field) => <li key={field}>{FIELD_QUESTIONS[field] || `请补充 ${field}`}</li>)}
+                          {(parsedResponse.clarificationQuestions || []).map((question) => <li key={question}>{question}</li>)}
+                        </ul>
+                        <p className="mt-2 text-xs text-amber-700">可以直接在下方方案卡片中补充。</p>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-start gap-3">
+                    <BotAvatar />
+                    <div className="min-w-0 flex-1">
+                      <p className="mb-2 text-xs text-stone-500">AI 已生成完整方案卡片，请人工核对后提交。</p>
+                      <ActivityCard
+                        parsedResult={parsedResponse.result || {}}
+                        missingFields={parsedResponse.missingFields || []}
+                        sourceDocument={submittedDocument}
+                        creationMode="AI"
+                        onSaved={onActivityChanged}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {parseError && (
+                <div className="flex items-start gap-3">
+                  <BotAvatar />
+                  <div role="alert" className="max-w-2xl rounded-2xl rounded-tl-md border border-red-200 bg-red-50 px-4 py-3.5 text-sm text-red-700">{parseError}</div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <ChatBox
+            onSubmit={handleSubmit}
+            onParsed={handleParsed}
+            onError={handleError}
+            contextDocument={parsedResponse ? submittedDocument : ''}
+            placeholder={parsedResponse ? '继续补充人数、预算、场地或其他要求...' : '请粘贴活动大纲或文档...'}
+          />
+        </div>
+      )}
     </div>
+  )
+}
+
+function ModeCard({ active, title, badge, description, onClick, icon }) {
+  return (
+    <button type="button" onClick={onClick} className={`relative rounded-2xl border p-5 text-left transition ${active ? 'border-indigo-500 bg-indigo-50 shadow-[0_8px_30px_rgba(79,70,229,0.12)] ring-2 ring-indigo-100' : 'border-stone-200 bg-white hover:border-stone-300 hover:shadow-sm'}`}>
+      <div className="flex items-center gap-3">
+        <span className={`grid h-10 w-10 place-items-center rounded-xl text-lg ${active ? 'bg-indigo-600 text-white' : 'bg-stone-100 text-stone-600'}`}>{icon}</span>
+        <div>
+          <div className="flex items-center gap-2"><span className="font-bold text-stone-900">{title}</span>{badge && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">{badge}</span>}</div>
+          <p className="mt-1 text-xs leading-5 text-stone-500">{description}</p>
+        </div>
+      </div>
+    </button>
   )
 }

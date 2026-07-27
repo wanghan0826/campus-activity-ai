@@ -20,15 +20,20 @@ public class ActivityPrompt {
 
         ## 时间规范化
         所有时间字段转换为 ISO 8601 格式（yyyy-MM-ddTHH:mm:ss）。
-        - 如果提到"下周五14:00"，请根据当前日期推算出具体日期。
+        - 如果提到"下周五14:00"但无法可靠确定当前日期，请保留为 null，不要编造具体日期。
         - 如果只提到活动时间没提报名时间，regStartTime/regEndTime 返回 null。
         - publishTime（上架时间）默认为活动开始前 3 天，offlineTime（下架时间）默认为活动结束后 1 天。
-        - 如果没有提到具体时间点，默认活动时间为当天 08:00-17:00。
+        - 如果没有提到活动日期或具体时间点，对应字段返回 null，交由教师补充。
 
         ## 其他规则
         - content 字段：将教师的简略描述展开为 200-300 字的完整活动介绍，语言正式、清晰。
         - organizer 默认为"待定"如果文档未提及。
         - maxParticipants 如果未提及返回 null。
+        - targetAudience、contactInfo、budget 未提及均返回 null，不要编造关键业务信息。
+        - registrationRequired 表示是否需要报名，registrationApprovalRequired 表示报名是否需要教师审核。
+        - recognitionType 只能是 NONE（不认定）、CREDIT（第二课堂学分）、VOLUNTEER（志愿时长）或 BOTH（两者都有）。
+        - checkInMode 只能是 QR（二维码签到）、MANUAL（人工签到）或 NONE（无需签到）。
+        - 学分、志愿时长、报名审核、签到方式及认定要求未提及时返回 null，不要自行编造。
         - coverImagePrompt：生成一句中文封面图描述提示词，用于后续 AI 文生图。
 
         ## 输出格式
@@ -39,6 +44,8 @@ public class ActivityPrompt {
           "campus": "校区",
           "location": "活动地点",
           "organizer": "组织者",
+          "targetAudience": "面向对象",
+          "contactInfo": "联系人及联系方式",
           "coverImagePrompt": "封面图生成提示词",
           "content": "活动完整描述",
           "startTime": "2026-07-25T14:00:00",
@@ -48,6 +55,14 @@ public class ActivityPrompt {
           "publishTime": "2026-07-22T08:00:00",
           "offlineTime": "2026-07-26T23:59:59",
           "maxParticipants": 120,
+          "budget": 3000,
+          "registrationRequired": true,
+          "registrationApprovalRequired": false,
+          "recognitionType": "CREDIT",
+          "secondClassCredits": 0.5,
+          "volunteerHours": null,
+          "checkInMode": "QR",
+          "participationRequirements": "完成签到并全程参与活动后予以认定",
           "hasPromoMaterial": false,
           "promoApproved": null,
           "schedule": [

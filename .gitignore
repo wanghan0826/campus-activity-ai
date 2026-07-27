@@ -1,6 +1,7 @@
 # 密钥（绝对不能提交）
 .env
 *.env
+.env.local
 application-local.yml
 
 # IDE

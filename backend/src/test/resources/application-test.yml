@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:campus_test;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+  sql:
+    init:
+      mode: never
+
+ai:
+  provider: http
+  api-key: test-key
+  api-url: http://localhost/unused
+  model: test-model

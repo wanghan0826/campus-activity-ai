@@ -23,5 +23,5 @@ spring:
 ai:
   provider: http           # http: 直接调API | spring-ai: 后续切Spring AI
   api-key: ${AI_API_KEY:your-api-key}
-  api-url: ${AI_API_URL:https://api.anthropic.com/v1/messages}
-  model: ${AI_MODEL:claude-sonnet-5-20250929}
+  api-url: ${AI_API_URL:https://api.deepseek.com/chat/completions}
+  model: ${AI_MODEL:deepseek-chat}
