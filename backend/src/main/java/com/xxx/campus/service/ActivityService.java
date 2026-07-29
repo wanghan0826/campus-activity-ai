@@ -38,6 +38,8 @@ public class ActivityService {
 
     private final AiService aiService;
     private final ActivityRepository activityRepository;
+    private final WeComMessageService weComMessageService;
+    private final WeComCalendarService weComCalendarService;
 
     public Map<String, Object> parseDocument(String document, String creatorId) {
         ActivityParsedResult result = aiService.parseActivity(document);
@@ -70,7 +72,14 @@ public class ActivityService {
         Activity activity = getOwnedActivity(id, creatorId);
         ensureEditable(activity);
         applyResult(activity, result);
-        return activityRepository.save(activity);
+        Activity saved = activityRepository.save(activity);
+
+        // 异步：如果已有日程则同步更新
+        if (saved.getCalendarEventId() != null) {
+            weComCalendarService.updateSchedule(saved);
+        }
+
+        return saved;
     }
 
     @Transactional(readOnly = true)
@@ -92,9 +101,22 @@ public class ActivityService {
         ensureEditable(activity);
         validateForSubmission(activity);
         activity.setApprovalMessage(message == null ? null : message.trim());
-        activity.setStatus("PENDING_APPROVAL");
+        // 暂时跳过审批流程，直接发布
+        activity.setStatus("PUBLISHED");
+        activity.setPublishTime(LocalDateTime.now());
         activity.setSubmittedAt(LocalDateTime.now());
-        return activityRepository.save(activity);
+        Activity saved = activityRepository.save(activity);
+
+        // 异步：发送卡片通知给创建者
+        weComMessageService.notifyPublished(saved);
+        // 同步：创建企业微信日程
+        String scheduleId = weComCalendarService.createSchedule(saved);
+        if (scheduleId != null) {
+            saved.setCalendarEventId(scheduleId);
+            saved = activityRepository.save(saved);
+        }
+
+        return saved;
     }
 
     @Transactional

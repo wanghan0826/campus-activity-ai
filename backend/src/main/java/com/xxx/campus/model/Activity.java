@@ -127,6 +127,10 @@ public class Activity {
 
     private LocalDateTime submittedAt;
 
+    /** 企业微信日程 ID，用于更新/删除已创建的日程 */
+    @Column(length = 100)
+    private String calendarEventId;
+
     // ── 状态 ──
     @Column(nullable = false, length = 20)
     @Builder.Default
