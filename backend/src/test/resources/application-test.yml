@@ -12,6 +12,13 @@ spring:
     init:
       mode: never
 
+wecom:
+  corp-id: test-corp
+  agent-id: "1000001"
+  secret: test-secret
+  notification-enabled: false
+  calendar-enabled: false
+
 ai:
   provider: http
   api-key: test-key

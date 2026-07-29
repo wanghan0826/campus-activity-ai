@@ -200,10 +200,10 @@ export default function ActivityCard({
       const saved = await persistDraft()
       const submitted = await submitActivity(saved.id, approvalMessage)
       setActivity((current) => ({ ...current, ...submitted }))
-      setSuccess('活动已提交审批，可在“活动管理”中查看进度')
+      setSuccess('活动已发布，学生端可见')
       onSaved?.(submitted, 'submitted')
     } catch (requestError) {
-      setError(getApiErrorMessage(requestError, '提交审批失败，请检查活动信息'))
+      setError(getApiErrorMessage(requestError, '发布活动失败，请检查活动信息'))
     } finally {
       setSubmitting('')
     }
@@ -303,9 +303,9 @@ export default function ActivityCard({
           </section>
 
           <section className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
-            <h3 className="text-sm font-bold text-amber-900">审批设置</h3>
-            <p className="mt-1 text-xs leading-5 text-amber-700">正式接入企业微信后，将根据活动类别和所属部门自动匹配审批人。</p>
-            <textarea value={approvalMessage} onChange={(event) => setApprovalMessage(event.target.value)} rows={3} placeholder="给审批老师的附加留言（选填）" className="form-input mt-3 resize-y bg-white" />
+            <h3 className="text-sm font-bold text-amber-900">发布备注</h3>
+            <p className="mt-1 text-xs leading-5 text-amber-700">活动将直接发布到学生端，同时发送企业微信通知并创建日程。</p>
+            <textarea value={approvalMessage} onChange={(event) => setApprovalMessage(event.target.value)} rows={3} placeholder="发布备注（选填）" className="form-input mt-3 resize-y bg-white" />
           </section>
         </div>
       )}
@@ -321,7 +321,7 @@ export default function ActivityCard({
             {view === 'preview' ? '返回编辑' : '预览学生视角'}
           </button>
           <button type="button" onClick={handleSubmit} disabled={Boolean(submitting) || activity.status === 'PENDING_APPROVAL'} className="rounded-xl bg-stone-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-stone-300">
-            {submitting === 'submit' ? '正在提交…' : '提交审批'}
+            {submitting === 'submit' ? '正在发布…' : '发布活动'}
           </button>
         </div>
       </div>

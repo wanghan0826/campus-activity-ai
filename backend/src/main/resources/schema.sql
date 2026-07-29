@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS activity (
     promo_approved   BOOLEAN       COMMENT '宣传品是否已通过审核',
     approval_message VARCHAR(500)  COMMENT '提交审批时的附加留言',
     submitted_at     DATETIME      COMMENT '提交审批时间',
+    calendar_event_id VARCHAR(100) COMMENT '企业微信日程ID',
     status           VARCHAR(20)   NOT NULL DEFAULT 'DRAFT' COMMENT 'DRAFT/PENDING_APPROVAL/APPROVED/PUBLISHED/OFFLINE/REJECTED',
     creator_id       VARCHAR(100)  NOT NULL COMMENT '创建人userid',
     created_at       DATETIME      DEFAULT CURRENT_TIMESTAMP,

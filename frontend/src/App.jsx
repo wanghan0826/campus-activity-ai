@@ -40,14 +40,14 @@ export default function App() {
 
           <div className="flex items-center gap-2 rounded-full border border-stone-200 bg-white py-1.5 pl-1.5 pr-3">
             <span className="grid h-7 w-7 place-items-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">师</span>
-            <div className="hidden text-left md:block"><div className="text-xs font-semibold text-stone-700">测试教师</div><div className="text-[10px] text-stone-400">身份待接入</div></div>
+            <div className="hidden text-left md:block"><div className="text-xs font-semibold text-stone-700">教师用户</div><div className="text-[10px] text-stone-400">企业微信工作台</div></div>
           </div>
         </div>
       </header>
 
       <main>
         {page === 'create' ? (
-          <CreateActivity editingActivity={editingActivity} onActivityChanged={() => {}} onCancelEdit={openManagement} />
+          <CreateActivity editingActivity={editingActivity} onActivityChanged={(activity, type) => { if (type === 'submitted') openManagement() }} onCancelEdit={openManagement} />
         ) : (
           <ActivityManagement onCreate={openCreate} onEdit={editActivity} />
         )}
