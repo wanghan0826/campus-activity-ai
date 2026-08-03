@@ -1,21 +1,35 @@
 import { useState } from 'react'
+import { setApiIdentity } from './api/activity.js'
+import AiSettingsDialog from './components/AiSettingsDialog.jsx'
+import ApprovalWorkbench from './pages/ApprovalWorkbench.jsx'
 import ActivityManagement from './pages/ActivityManagement.jsx'
 import CreateActivity from './pages/CreateActivity.jsx'
+
+const DEMO_IDENTITIES = [
+  { id: 'test_teacher_001', role: 'PUBLISHER', college: 'INFORMATION_ENGINEERING', collegeName: '信息工程学院', name: '活动发布人', short: '发' },
+  { id: 'review_teacher_001', role: 'COLLEGE_REVIEWER', college: 'INFORMATION_ENGINEERING', collegeName: '信息工程学院', name: '学院审核老师', short: '审' },
+  { id: 'college_leader_001', role: 'COLLEGE_LEADER', college: 'INFORMATION_ENGINEERING', collegeName: '信息工程学院', name: '学院领导', short: '领' },
+]
 
 export default function App() {
   const [page, setPage] = useState('create')
   const [editingActivity, setEditingActivity] = useState(null)
+  const [identity, setIdentity] = useState(DEMO_IDENTITIES[0])
+  const [showAiSettings, setShowAiSettings] = useState(false)
+  const isPublisher = identity.role === 'PUBLISHER'
 
-  const openCreate = () => {
+  const navigate = (nextPage) => {
     setEditingActivity(null)
-    setPage('create')
+    setPage(nextPage)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const openManagement = () => {
+  const changeIdentity = (id) => {
+    const next = DEMO_IDENTITIES.find((item) => item.id === id) || DEMO_IDENTITIES[0]
+    setIdentity(next)
+    setApiIdentity(next)
     setEditingActivity(null)
-    setPage('manage')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    setPage(next.role === 'PUBLISHER' ? 'manage' : 'approvals')
   }
 
   const editActivity = (activity) => {
@@ -28,35 +42,52 @@ export default function App() {
     <div className="min-h-screen bg-[#f7f7f8] pb-16 text-stone-900 sm:pb-0">
       <header className="sticky top-0 z-40 border-b border-stone-200/80 bg-white/90 px-4 py-3 backdrop-blur-xl sm:px-6">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
-          <button type="button" onClick={openCreate} className="flex items-center gap-3 text-left">
+          <button type="button" onClick={() => navigate(isPublisher ? 'create' : 'approvals')} className="flex items-center gap-3 text-left">
             <div className="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-700 text-lg font-bold text-white shadow-sm">校</div>
-            <div><div className="text-sm font-bold tracking-wide text-stone-950 sm:text-base">学院活动工作台</div><div className="text-[11px] text-stone-400">企业微信应用 · 教师端</div></div>
+            <div><div className="text-sm font-bold tracking-wide text-stone-950 sm:text-base">学院活动工作台</div><div className="text-[11px] text-stone-400">发布与两级审批</div></div>
           </button>
 
           <nav className="hidden items-center gap-1 rounded-xl bg-stone-100 p-1 sm:flex">
-            <NavButton active={page === 'create'} onClick={openCreate}>创建活动</NavButton>
-            <NavButton active={page === 'manage'} onClick={openManagement}>活动管理</NavButton>
+            {isPublisher ? (
+              <>
+                <NavButton active={page === 'create'} onClick={() => navigate('create')}>创建活动</NavButton>
+                <NavButton active={page === 'manage'} onClick={() => navigate('manage')}>活动管理</NavButton>
+              </>
+            ) : (
+              <NavButton active onClick={() => navigate('approvals')}>审批工作台</NavButton>
+            )}
           </nav>
 
-          <div className="flex items-center gap-2 rounded-full border border-stone-200 bg-white py-1.5 pl-1.5 pr-3">
-            <span className="grid h-7 w-7 place-items-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">师</span>
-            <div className="hidden text-left md:block"><div className="text-xs font-semibold text-stone-700">教师用户</div><div className="text-[10px] text-stone-400">企业微信工作台</div></div>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setShowAiSettings(true)} className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700 hover:bg-indigo-100">AI 设置</button>
+            <label className="flex items-center gap-2 rounded-full border border-stone-200 bg-white py-1.5 pl-1.5 pr-2">
+              <span className="grid h-7 w-7 place-items-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">{identity.short}</span>
+              <span className="sr-only">切换演示身份</span>
+              <select value={identity.id} onChange={(event) => changeIdentity(event.target.value)} className="max-w-24 bg-transparent text-xs font-semibold text-stone-700 outline-none sm:max-w-none">
+                {DEMO_IDENTITIES.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+              </select>
+            </label>
           </div>
         </div>
       </header>
 
       <main>
-        {page === 'create' ? (
-          <CreateActivity editingActivity={editingActivity} onActivityChanged={(activity, type) => { if (type === 'submitted') openManagement() }} onCancelEdit={openManagement} />
+        {page === 'create' && isPublisher ? (
+          <CreateActivity editingActivity={editingActivity} onActivityChanged={(activity, type) => { if (type === 'submitted') navigate('manage') }} onCancelEdit={() => navigate('manage')} />
+        ) : page === 'manage' && isPublisher ? (
+          <ActivityManagement onCreate={() => navigate('create')} onEdit={editActivity} />
         ) : (
-          <ActivityManagement onCreate={openCreate} onEdit={editActivity} />
+          <ApprovalWorkbench identity={identity} />
         )}
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-2 border-t border-stone-200 bg-white/95 p-2 backdrop-blur sm:hidden">
-        <MobileNav active={page === 'create'} onClick={openCreate} icon="＋">创建活动</MobileNav>
-        <MobileNav active={page === 'manage'} onClick={openManagement} icon="☷">活动管理</MobileNav>
-      </nav>
+      {isPublisher && (
+        <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-2 border-t border-stone-200 bg-white/95 p-2 backdrop-blur sm:hidden">
+          <MobileNav active={page === 'create'} onClick={() => navigate('create')} icon="＋">创建活动</MobileNav>
+          <MobileNav active={page === 'manage'} onClick={() => navigate('manage')} icon="☷">活动管理</MobileNav>
+        </nav>
+      )}
+      {showAiSettings && <AiSettingsDialog onClose={() => setShowAiSettings(false)} />}
     </div>
   )
 }

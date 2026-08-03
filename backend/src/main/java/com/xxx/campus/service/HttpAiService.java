@@ -1,13 +1,15 @@
 package com.xxx.campus.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xxx.campus.config.AiRuntimeSettings;
 import com.xxx.campus.model.ActivityParsedResult;
 import com.xxx.campus.prompt.ActivityPrompt;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
@@ -21,23 +23,25 @@ public class HttpAiService implements AiService {
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
-
-    @Value("${ai.api-key}")
-    private String apiKey;
-
-    @Value("${ai.model}")
-    private String model;
+    private final RelativeDateResolver relativeDateResolver;
+    private final AiRuntimeSettings aiSettings;
 
     public HttpAiService(ObjectMapper objectMapper,
-                         @Value("${ai.api-url}") String apiUrl) {
+                         RelativeDateResolver relativeDateResolver,
+                         AiRuntimeSettings aiSettings) {
         this.objectMapper = objectMapper;
+        this.relativeDateResolver = relativeDateResolver;
+        this.aiSettings = aiSettings;
         this.restClient = RestClient.builder()
-                .baseUrl(apiUrl)
+                .baseUrl(aiSettings.getApiUrl())
                 .build();
     }
 
     @Override
     public ActivityParsedResult parseActivity(String document) {
+        if (!aiSettings.isConfigured()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "请先在右上角“AI 设置”中配置 API Key");
+        }
         // 构建请求 body（兼容 Claude Messages API 和 DeepSeek Chat API）
         Map<String, Object> requestBody = buildRequestBody(document);
 
@@ -45,7 +49,7 @@ public class HttpAiService implements AiService {
         String response = restClient.post()
                 .uri("")
                 .contentType(MediaType.APPLICATION_JSON)
-                .header("Authorization", "Bearer " + apiKey)
+                .header("Authorization", "Bearer " + aiSettings.getApiKey())
                 .body(requestBody)
                 .retrieve()
                 .body(String.class);
@@ -56,12 +60,13 @@ public class HttpAiService implements AiService {
 
     private Map<String, Object> buildRequestBody(String document) {
         String userMessage = "请根据以下活动文档提取信息：\n\n" + document;
+        String dateContext = relativeDateResolver.buildPromptContext(document);
 
         return Map.of(
-                "model", model,
+                "model", aiSettings.getModel(),
                 "max_tokens", 4096,
                 "messages", List.of(
-                        Map.of("role", "system", "content", ActivityPrompt.SYSTEM_PROMPT),
+                        Map.of("role", "system", "content", ActivityPrompt.buildSystemPrompt(dateContext)),
                         Map.of("role", "user", "content", userMessage)
                 )
         );

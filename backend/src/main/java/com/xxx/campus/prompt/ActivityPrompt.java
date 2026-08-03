@@ -5,10 +5,20 @@ package com.xxx.campus.prompt;
  */
 public class ActivityPrompt {
 
-    public static final String SYSTEM_PROMPT = """
+    private static final String SYSTEM_PROMPT_TEMPLATE = """
         你是一个校园活动策划助手。用户会给你一段教师写的活动大纲或文档，
         请从中提取信息并以 JSON 格式返回。如果某项信息在文档中没有提及，
         对应字段返回 null。
+
+        ## 当前时间与相对日期参考
+        %s
+
+        换算规则：
+        - “星期四”“周四”等未注明周次的表达，取从今天起最近一次对应的星期；如果今天就是该星期，则取今天。
+        - “本周/这周”“下周/下星期”“下下周/下下星期”必须按对应自然周（周一至周日）换算。
+        - “今天、明天、后天、下个月”等相对日期，必须基于上面的当前时间换算，不得以模型知识中的日期为准。
+        - 公文同时写有明确日期和星期时，以明确日期为准；如二者不一致，不要擅自改动明确日期。
+        - 原文只有星期、没有年份或月份时，可以使用上面的参考完成日期换算，不再返回 null。
 
         ## 分类判断规则
         根据活动内容自动判断活动分类（category），必须是以下之一：
@@ -20,7 +30,7 @@ public class ActivityPrompt {
 
         ## 时间规范化
         所有时间字段转换为 ISO 8601 格式（yyyy-MM-ddTHH:mm:ss）。
-        - 如果提到"下周五14:00"但无法可靠确定当前日期，请保留为 null，不要编造具体日期。
+        - 如果提到“下周五14:00”，应基于当前日期换算为具体的 ISO 时间。
         - 如果只提到活动时间没提报名时间，regStartTime/regEndTime 返回 null。
         - publishTime（上架时间）默认为活动开始前 3 天，offlineTime（下架时间）默认为活动结束后 1 天。
         - 如果没有提到活动日期或具体时间点，对应字段返回 null，交由教师补充。
@@ -72,4 +82,11 @@ public class ActivityPrompt {
           "materials": ["物料1", "物料2"]
         }
         """;
+
+    private ActivityPrompt() {
+    }
+
+    public static String buildSystemPrompt(String dateContext) {
+        return SYSTEM_PROMPT_TEMPLATE.formatted(dateContext);
+    }
 }

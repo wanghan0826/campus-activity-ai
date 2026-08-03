@@ -37,6 +37,11 @@ CREATE TABLE IF NOT EXISTS activity (
     promo_approved   BOOLEAN       COMMENT '宣传品是否已通过审核',
     approval_message VARCHAR(500)  COMMENT '提交审批时的附加留言',
     submitted_at     DATETIME      COMMENT '提交审批时间',
+    approval_stage   VARCHAR(30)   COMMENT '当前节点: COLLEGE_REVIEWER/COLLEGE_LEADER/COMPLETED/REJECTED',
+    approval_round   INT           NOT NULL DEFAULT 0 COMMENT '审批轮次',
+    teacher_reviewed_at DATETIME   COMMENT '学院审核老师处理时间',
+    leader_reviewed_at  DATETIME   COMMENT '学院领导处理时间',
+    approved_at      DATETIME      COMMENT '两级审批完成时间',
     calendar_event_id VARCHAR(100) COMMENT '企业微信日程ID',
     status           VARCHAR(20)   NOT NULL DEFAULT 'DRAFT' COMMENT 'DRAFT/PENDING_APPROVAL/APPROVED/PUBLISHED/OFFLINE/REJECTED',
     creator_id       VARCHAR(100)  NOT NULL COMMENT '创建人userid',
@@ -65,3 +70,18 @@ CREATE TABLE IF NOT EXISTS activity_material (
     PRIMARY KEY (activity_id, sort_order),
     CONSTRAINT fk_material_activity FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS activity_approval_record (
+    id               BIGINT PRIMARY KEY AUTO_INCREMENT,
+    activity_id      BIGINT       NOT NULL,
+    approval_round   INT          NOT NULL,
+    step             VARCHAR(30)  NOT NULL COMMENT 'PUBLISHER/COLLEGE_REVIEWER/COLLEGE_LEADER',
+    action           VARCHAR(20)  NOT NULL COMMENT 'SUBMITTED/APPROVED/REJECTED',
+    operator_id      VARCHAR(100) NOT NULL,
+    operator_role    VARCHAR(30)  NOT NULL,
+    comment          VARCHAR(500),
+    created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_approval_activity (activity_id),
+    INDEX idx_approval_operator (operator_id),
+    CONSTRAINT fk_approval_activity FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='活动审批轨迹';

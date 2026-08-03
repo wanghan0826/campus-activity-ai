@@ -5,6 +5,7 @@ import {
   getActivities,
   getActivityStats,
   getApiErrorMessage,
+  publishActivity,
 } from '../api/activity.js'
 import ActivityPreview from '../components/ActivityPreview.jsx'
 
@@ -89,6 +90,20 @@ export default function ActivityManagement({ onCreate, onEdit }) {
     }
   }
 
+  const handlePublish = async (activity) => {
+    if (!window.confirm(`“${activity.title || '未命名活动'}”已完成两级审批，确定发布到学生端吗？`)) return
+    setActionId(activity.id)
+    setError('')
+    try {
+      await publishActivity(activity.id)
+      await loadActivities()
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, '活动发布失败'))
+    } finally {
+      setActionId(null)
+    }
+  }
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6 sm:py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -137,11 +152,11 @@ export default function ActivityManagement({ onCreate, onEdit }) {
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[920px] border-collapse text-left">
                 <thead><tr className="bg-stone-50 text-[11px] uppercase tracking-wider text-stone-400"><Th>活动信息</Th><Th>时间与地点</Th><Th>创建方式</Th><Th>状态</Th><Th>更新时间</Th><Th align="right">操作</Th></tr></thead>
-                <tbody>{activities.map((activity) => <ActivityRow key={activity.id} activity={activity} busy={actionId === activity.id} onPreview={setPreview} onEdit={onEdit} onDuplicate={handleDuplicate} onDelete={handleDelete} />)}</tbody>
+                <tbody>{activities.map((activity) => <ActivityRow key={activity.id} activity={activity} busy={actionId === activity.id} onPreview={setPreview} onEdit={onEdit} onDuplicate={handleDuplicate} onDelete={handleDelete} onPublish={handlePublish} />)}</tbody>
               </table>
             </div>
             <div className="divide-y divide-stone-100 md:hidden">
-              {activities.map((activity) => <ActivityMobileCard key={activity.id} activity={activity} busy={actionId === activity.id} onPreview={setPreview} onEdit={onEdit} onDuplicate={handleDuplicate} onDelete={handleDelete} />)}
+              {activities.map((activity) => <ActivityMobileCard key={activity.id} activity={activity} busy={actionId === activity.id} onPreview={setPreview} onEdit={onEdit} onDuplicate={handleDuplicate} onDelete={handleDelete} onPublish={handlePublish} />)}
             </div>
           </>
         )}
@@ -164,32 +179,37 @@ function SummaryCard({ label, value, hint, tone }) {
   return <div className={`rounded-2xl border border-stone-200 p-5 shadow-sm ${tones[tone]}`}><div className="text-xs font-semibold opacity-70">{label}</div><div className="mt-2 text-3xl font-bold">{value}</div><div className="mt-1 text-xs opacity-60">{hint}</div></div>
 }
 
-function ActivityRow({ activity, busy, onPreview, onEdit, onDuplicate, onDelete }) {
+function ActivityRow({ activity, busy, onPreview, onEdit, onDuplicate, onDelete, onPublish }) {
   const editable = ['DRAFT', 'REJECTED'].includes(activity.status)
   return (
     <tr className="border-t border-stone-100 text-sm hover:bg-stone-50/70">
       <td className="px-5 py-4"><button type="button" onClick={() => onPreview(activity)} className="max-w-xs text-left"><div className="font-bold text-stone-900 hover:text-indigo-600">{activity.title || '未命名活动'}</div><div className="mt-1 text-xs text-stone-400">{CATEGORY_LABELS[activity.category] || '未分类'} · #{activity.id}</div></button></td>
       <td className="px-5 py-4"><div className="text-stone-700">{formatDate(activity.startTime)}</div><div className="mt-1 max-w-52 truncate text-xs text-stone-400">{activity.location || '地点待定'}</div></td>
       <td className="px-5 py-4 text-xs text-stone-500">{activity.creationMode === 'MANUAL' ? '手动创建' : 'AI 创建'}</td>
-      <td className="px-5 py-4"><StatusBadge status={activity.status} /></td>
+      <td className="px-5 py-4"><StatusBadge activity={activity} /></td>
       <td className="px-5 py-4 text-xs text-stone-400">{formatDate(activity.updatedAt)}</td>
-      <td className="px-5 py-4"><div className="flex justify-end gap-1"><Action onClick={() => onPreview(activity)}>预览</Action>{editable && <Action onClick={() => onEdit(activity)}>编辑</Action>}<Action disabled={busy} onClick={() => onDuplicate(activity)}>复制</Action>{editable && <Action danger disabled={busy} onClick={() => onDelete(activity)}>删除</Action>}</div></td>
+      <td className="px-5 py-4"><div className="flex justify-end gap-1"><Action onClick={() => onPreview(activity)}>预览</Action>{editable && <Action onClick={() => onEdit(activity)}>编辑</Action>}{activity.status === 'APPROVED' && <Action primary disabled={busy} onClick={() => onPublish(activity)}>发布</Action>}<Action disabled={busy} onClick={() => onDuplicate(activity)}>复制</Action>{editable && <Action danger disabled={busy} onClick={() => onDelete(activity)}>删除</Action>}</div></td>
     </tr>
   )
 }
 
-function ActivityMobileCard({ activity, busy, onPreview, onEdit, onDuplicate, onDelete }) {
+function ActivityMobileCard({ activity, busy, onPreview, onEdit, onDuplicate, onDelete, onPublish }) {
   const editable = ['DRAFT', 'REJECTED'].includes(activity.status)
-  return <div className="p-4"><div className="flex items-start justify-between gap-3"><button type="button" onClick={() => onPreview(activity)} className="text-left"><div className="font-bold text-stone-900">{activity.title || '未命名活动'}</div><div className="mt-1 text-xs text-stone-400">{CATEGORY_LABELS[activity.category] || '未分类'} · {formatDate(activity.startTime)}</div></button><StatusBadge status={activity.status} /></div><div className="mt-3 rounded-xl bg-stone-50 px-3 py-2 text-xs text-stone-500">{activity.location || '地点待定'} · {activity.creationMode === 'MANUAL' ? '手动创建' : 'AI 创建'}</div><div className="mt-3 flex flex-wrap justify-end gap-1"><Action onClick={() => onPreview(activity)}>预览</Action>{editable && <Action onClick={() => onEdit(activity)}>编辑</Action>}<Action disabled={busy} onClick={() => onDuplicate(activity)}>复制</Action>{editable && <Action danger disabled={busy} onClick={() => onDelete(activity)}>删除</Action>}</div></div>
+  return <div className="p-4"><div className="flex items-start justify-between gap-3"><button type="button" onClick={() => onPreview(activity)} className="text-left"><div className="font-bold text-stone-900">{activity.title || '未命名活动'}</div><div className="mt-1 text-xs text-stone-400">{CATEGORY_LABELS[activity.category] || '未分类'} · {formatDate(activity.startTime)}</div></button><StatusBadge activity={activity} /></div><div className="mt-3 rounded-xl bg-stone-50 px-3 py-2 text-xs text-stone-500">{activity.location || '地点待定'} · {activity.creationMode === 'MANUAL' ? '手动创建' : 'AI 创建'}</div><div className="mt-3 flex flex-wrap justify-end gap-1"><Action onClick={() => onPreview(activity)}>预览</Action>{editable && <Action onClick={() => onEdit(activity)}>编辑</Action>}{activity.status === 'APPROVED' && <Action primary disabled={busy} onClick={() => onPublish(activity)}>发布</Action>}<Action disabled={busy} onClick={() => onDuplicate(activity)}>复制</Action>{editable && <Action danger disabled={busy} onClick={() => onDelete(activity)}>删除</Action>}</div></div>
 }
 
-function StatusBadge({ status }) {
+function StatusBadge({ activity }) {
+  const { status, approvalStage } = activity
   const meta = STATUS_META[status] || { label: status || '未知', classes: 'bg-stone-100 text-stone-600' }
-  return <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ${meta.classes}`}>{meta.label}</span>
+  const label = status === 'PENDING_APPROVAL'
+    ? (approvalStage === 'COLLEGE_LEADER' ? '待学院领导' : '待审核老师')
+    : meta.label
+  return <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ${meta.classes}`}>{label}</span>
 }
 
-function Action({ children, onClick, disabled, danger = false }) {
-  return <button type="button" disabled={disabled} onClick={onClick} className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition disabled:opacity-40 ${danger ? 'text-red-600 hover:bg-red-50' : 'text-stone-500 hover:bg-stone-100 hover:text-indigo-600'}`}>{children}</button>
+function Action({ children, onClick, disabled, danger = false, primary = false }) {
+  const tone = primary ? 'bg-indigo-600 text-white hover:bg-indigo-700' : danger ? 'text-red-600 hover:bg-red-50' : 'text-stone-500 hover:bg-stone-100 hover:text-indigo-600'
+  return <button type="button" disabled={disabled} onClick={onClick} className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition disabled:opacity-40 ${tone}`}>{children}</button>
 }
 
 function Th({ children, align }) {

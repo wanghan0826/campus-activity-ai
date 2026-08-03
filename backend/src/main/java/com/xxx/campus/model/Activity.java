@@ -127,6 +127,20 @@ public class Activity {
 
     private LocalDateTime submittedAt;
 
+    /** 当前审批节点：COLLEGE_REVIEWER / COLLEGE_LEADER / COMPLETED / REJECTED。 */
+    @Column(length = 30)
+    private String approvalStage;
+
+    /** 每次驳回后重新提交都会进入新的审批轮次。 */
+    @Builder.Default
+    private Integer approvalRound = 0;
+
+    private LocalDateTime teacherReviewedAt;
+
+    private LocalDateTime leaderReviewedAt;
+
+    private LocalDateTime approvedAt;
+
     /** 企业微信日程 ID，用于更新/删除已创建的日程 */
     @Column(length = 100)
     private String calendarEventId;
@@ -136,7 +150,7 @@ public class Activity {
     @Builder.Default
     private String status = "DRAFT";
     // DRAFT → PENDING_APPROVAL → APPROVED → PUBLISHED → OFFLINE
-    //                              ↘ REJECTED → DRAFT
+    //                 ↘ REJECTED → PENDING_APPROVAL（重新提交）
 
     @Column(nullable = false, length = 100)
     private String creatorId;

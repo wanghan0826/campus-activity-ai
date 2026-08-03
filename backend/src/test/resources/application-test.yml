@@ -21,6 +21,6 @@ wecom:
 
 ai:
   provider: http
-  api-key: test-key
-  api-url: http://localhost/unused
-  model: test-model
+  api-key: your-api-key
+  api-url: https://api.deepseek.com/chat/completions
+  model: deepseek-chat

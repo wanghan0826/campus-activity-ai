@@ -200,10 +200,10 @@ export default function ActivityCard({
       const saved = await persistDraft()
       const submitted = await submitActivity(saved.id, approvalMessage)
       setActivity((current) => ({ ...current, ...submitted }))
-      setSuccess('活动已发布，学生端可见')
+      setSuccess('已提交学院审核老师，审批通过后可发布')
       onSaved?.(submitted, 'submitted')
     } catch (requestError) {
-      setError(getApiErrorMessage(requestError, '发布活动失败，请检查活动信息'))
+      setError(getApiErrorMessage(requestError, '提交审批失败，请检查活动信息'))
     } finally {
       setSubmitting('')
     }
@@ -303,9 +303,9 @@ export default function ActivityCard({
           </section>
 
           <section className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
-            <h3 className="text-sm font-bold text-amber-900">发布备注</h3>
-            <p className="mt-1 text-xs leading-5 text-amber-700">活动将直接发布到学生端，同时发送企业微信通知并创建日程。</p>
-            <textarea value={approvalMessage} onChange={(event) => setApprovalMessage(event.target.value)} rows={3} placeholder="发布备注（选填）" className="form-input mt-3 resize-y bg-white" />
+            <h3 className="text-sm font-bold text-amber-900">审批备注</h3>
+            <p className="mt-1 text-xs leading-5 text-amber-700">提交后将依次由学院审核老师、学院领导审批；两级通过后由发布人确认上架。</p>
+            <textarea value={approvalMessage} onChange={(event) => setApprovalMessage(event.target.value)} rows={3} maxLength={500} placeholder="给审批人的补充说明（选填）" className="form-input mt-3 resize-y bg-white" />
           </section>
         </div>
       )}
@@ -321,7 +321,7 @@ export default function ActivityCard({
             {view === 'preview' ? '返回编辑' : '预览学生视角'}
           </button>
           <button type="button" onClick={handleSubmit} disabled={Boolean(submitting) || activity.status === 'PENDING_APPROVAL'} className="rounded-xl bg-stone-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-stone-300">
-            {submitting === 'submit' ? '正在发布…' : '发布活动'}
+            {submitting === 'submit' ? '正在提交…' : '提交审批'}
           </button>
         </div>
       </div>

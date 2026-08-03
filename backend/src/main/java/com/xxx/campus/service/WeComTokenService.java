@@ -96,6 +96,7 @@ public class WeComTokenService {
      */
     @Scheduled(fixedRate = 100 * 60 * 1000)
     public void scheduledRefresh() {
+        if (!properties.isNotificationEnabled() && !properties.isCalendarEnabled()) return;
         try {
             refreshToken();
         } catch (Exception e) {

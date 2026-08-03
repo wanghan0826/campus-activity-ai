@@ -38,6 +38,7 @@ public class ActivityService {
 
     private final AiService aiService;
     private final ActivityRepository activityRepository;
+    private final ApprovalService approvalService;
     private final WeComMessageService weComMessageService;
     private final WeComCalendarService weComCalendarService;
 
@@ -60,9 +61,6 @@ public class ActivityService {
         Activity activity = new Activity();
         activity.setCreatorId(creatorId);
         activity.setStatus("DRAFT");
-        activity.setReviewDept("待分配");
-        activity.setReviewTeacher("待分配");
-        activity.setReviewLeader("待分配");
         applyResult(activity, result);
         return activityRepository.save(activity);
     }
@@ -96,26 +94,47 @@ public class ActivityService {
     }
 
     @Transactional
-    public Activity submitForApproval(Long id, String message, String creatorId) {
+    public Activity submitForApproval(Long id, String message, String creatorId, String college) {
         Activity activity = getOwnedActivity(id, creatorId);
         ensureEditable(activity);
         validateForSubmission(activity);
+        if (isBlank(college)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "未识别到发布人所属学院");
+        }
         activity.setApprovalMessage(message == null ? null : message.trim());
-        // 暂时跳过审批流程，直接发布
-        activity.setStatus("PUBLISHED");
-        activity.setPublishTime(LocalDateTime.now());
+        activity.setReviewDept(college.trim());
+        activity.setReviewTeacher(null);
+        activity.setReviewLeader(null);
+        activity.setTeacherReviewedAt(null);
+        activity.setLeaderReviewedAt(null);
+        activity.setApprovedAt(null);
+        activity.setApprovalRound((activity.getApprovalRound() == null ? 0 : activity.getApprovalRound()) + 1);
+        activity.setApprovalStage(ApprovalService.STAGE_COLLEGE_REVIEWER);
+        activity.setStatus("PENDING_APPROVAL");
         activity.setSubmittedAt(LocalDateTime.now());
         Activity saved = activityRepository.save(activity);
+        approvalService.recordSubmission(saved, creatorId, message);
+        weComMessageService.notifySubmitted(saved);
+        return saved;
+    }
 
-        // 异步：发送卡片通知给创建者
+    /** 学院两级审批都通过后，由发布人确认上架。 */
+    @Transactional
+    public Activity publishActivity(Long id, String creatorId) {
+        Activity activity = getOwnedActivity(id, creatorId);
+        if (!"APPROVED".equals(activity.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "活动尚未完成学院两级审批或已经发布");
+        }
+        activity.setStatus("PUBLISHED");
+        activity.setPublishTime(LocalDateTime.now());
+        Activity saved = activityRepository.save(activity);
+
         weComMessageService.notifyPublished(saved);
-        // 同步：创建企业微信日程
         String scheduleId = weComCalendarService.createSchedule(saved);
         if (scheduleId != null) {
             saved.setCalendarEventId(scheduleId);
             saved = activityRepository.save(saved);
         }
-
         return saved;
     }
 
@@ -125,9 +144,6 @@ public class ActivityService {
         Activity copy = new Activity();
         copy.setCreatorId(creatorId);
         copy.setStatus("DRAFT");
-        copy.setReviewDept("待分配");
-        copy.setReviewTeacher("待分配");
-        copy.setReviewLeader("待分配");
         copy.setTitle(defaultIfBlank(source.getTitle(), "未命名活动") + "（副本）");
         copy.setCategory(source.getCategory());
         copy.setCampus(source.getCampus());

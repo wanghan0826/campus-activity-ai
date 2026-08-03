@@ -74,9 +74,17 @@ public class ActivityController {
     public ResponseEntity<Activity> submitForApproval(
             @PathVariable Long id,
             @RequestBody(required = false) SubmitApprovalRequest request,
-            @RequestHeader(value = "X-User-Id", defaultValue = "test_teacher_001") String creatorId) {
+            @RequestHeader(value = "X-User-Id", defaultValue = "test_teacher_001") String creatorId,
+            @RequestHeader(value = "X-User-College", defaultValue = "INFORMATION_ENGINEERING") String college) {
         String message = request == null ? null : request.getMessage();
-        return ResponseEntity.ok(activityService.submitForApproval(id, message, creatorId));
+        return ResponseEntity.ok(activityService.submitForApproval(id, message, creatorId, college));
+    }
+
+    @PostMapping("/{id}/publish")
+    public ResponseEntity<Activity> publishActivity(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Id", defaultValue = "test_teacher_001") String creatorId) {
+        return ResponseEntity.ok(activityService.publishActivity(id, creatorId));
     }
 
     @PostMapping("/{id}/duplicate")
