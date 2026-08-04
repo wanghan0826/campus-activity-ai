@@ -9,7 +9,7 @@ class ImageRuntimeSettingsTest {
     @Test
     void shouldKeepImageKeyOnlyInMemory() {
         ImageRuntimeSettings settings = new ImageRuntimeSettings(
-                "", "https://ark.cn-beijing.volces.com/api/v3/images/generations", "doubao-seedream-4-0-250828");
+                "", "https://ark.cn-beijing.volces.com/api/v3/images/generations", "doubao-seedream-5-0-260128");
 
         assertThat(settings.isConfigured()).isFalse();
         settings.update("image-key-12345678", "http://localhost:9999/images", "image-model");

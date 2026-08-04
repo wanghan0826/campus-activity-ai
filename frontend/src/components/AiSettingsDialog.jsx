@@ -15,7 +15,7 @@ export default function AiSettingsDialog({ onClose }) {
   const [chatApiKey, setChatApiKey] = useState('')
   const [imageApiKey, setImageApiKey] = useState('')
   const [imageApiUrl, setImageApiUrl] = useState('https://ark.cn-beijing.volces.com/api/v3/images/generations')
-  const [imageModel, setImageModel] = useState('doubao-seedream-4-0-250828')
+  const [imageModel, setImageModel] = useState('doubao-seedream-5-0-260128')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState('')
   const [error, setError] = useState('')
@@ -27,7 +27,7 @@ export default function AiSettingsDialog({ onClose }) {
         setChatSettings(chat)
         setImageSettings(image)
         setImageApiUrl(image.apiUrl || 'https://ark.cn-beijing.volces.com/api/v3/images/generations')
-        setImageModel(image.model || 'doubao-seedream-4-0-250828')
+        setImageModel(image.model || 'doubao-seedream-5-0-260128')
       })
       .catch((requestError) => setError(getApiErrorMessage(requestError, 'AI 配置读取失败')))
       .finally(() => setLoading(false))
@@ -136,8 +136,8 @@ export default function AiSettingsDialog({ onClose }) {
             </SettingsSection>
 
             <SettingsSection
-              title="封面生图 · Seedream"
-              description="火山方舟国产生图模型，与即梦同源"
+              title="封面生图 · Seedream 5.0 Pro"
+              description="火山方舟高质量国产生图模型，与即梦同源"
               configured={imageSettings?.configured}
               maskedKey={imageSettings?.maskedKey}
               model={imageSettings?.model || imageModel}
@@ -149,7 +149,7 @@ export default function AiSettingsDialog({ onClose }) {
                 </label>
                 <label>
                   <span className="mb-1.5 block text-xs font-semibold text-stone-600">生图模型</span>
-                  <input value={imageModel} onChange={(event) => { setImageModel(event.target.value); resetFeedback() }} placeholder="doubao-seedream-4-0-250828" className="form-input" />
+                  <input value={imageModel} onChange={(event) => { setImageModel(event.target.value); resetFeedback() }} placeholder="doubao-seedream-5-0-260128" className="form-input" />
                 </label>
                 <label>
                   <span className="mb-1.5 flex items-center justify-between gap-2 text-xs font-semibold text-stone-600">

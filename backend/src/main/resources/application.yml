@@ -28,5 +28,5 @@ ai:
   image:
     api-key: ${AI_IMAGE_API_KEY:}
     api-url: ${AI_IMAGE_API_URL:https://ark.cn-beijing.volces.com/api/v3/images/generations}
-    model: ${AI_IMAGE_MODEL:doubao-seedream-4-0-250828}
+    model: ${AI_IMAGE_MODEL:doubao-seedream-5-0-260128}
     storage-path: ${AI_IMAGE_STORAGE_PATH:data/generated-covers}

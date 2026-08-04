@@ -46,12 +46,12 @@ mvn spring-boot:run
 
 本地原型也可以启动后，在页面右上角打开“AI 设置”输入 DeepSeek API Key。通过页面输入的 Key 只保存在当前后端进程内存中，不写数据库、浏览器存储或项目文件，后端重启后会自动清除；状态接口只返回掩码，不返回明文。
 
-封面生图使用独立配置，可直接在“AI 设置”中填写生图接口地址、模型和 API Key。默认使用火山方舟 Seedream（与即梦同源）；也可以通过环境变量配置：
+封面生图使用独立配置，可直接在“AI 设置”中填写生图接口地址、模型和 API Key。默认使用火山方舟 Seedream 5.0 Pro（与即梦同源）；也可以通过环境变量配置：
 
 ```powershell
 $env:AI_IMAGE_API_KEY="你的火山方舟 API Key"
 $env:AI_IMAGE_API_URL="https://ark.cn-beijing.volces.com/api/v3/images/generations"
-$env:AI_IMAGE_MODEL="doubao-seedream-4-0-250828"
+$env:AI_IMAGE_MODEL="doubao-seedream-5-0-260128"
 ```
 
 生成的图片默认保存在后端运行目录的 `data/generated-covers`，该目录不会提交到 GitHub。生产环境建议替换为对象存储。

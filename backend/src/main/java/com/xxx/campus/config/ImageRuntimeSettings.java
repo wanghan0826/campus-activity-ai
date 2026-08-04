@@ -13,7 +13,7 @@ public class ImageRuntimeSettings {
 
     public ImageRuntimeSettings(@Value("${ai.image.api-key:}") String apiKey,
                                 @Value("${ai.image.api-url:https://ark.cn-beijing.volces.com/api/v3/images/generations}") String apiUrl,
-                                @Value("${ai.image.model:doubao-seedream-4-0-250828}") String model) {
+                                @Value("${ai.image.model:doubao-seedream-5-0-260128}") String model) {
         this.apiKey = normalize(apiKey);
         this.apiUrl = normalize(apiUrl);
         this.model = normalize(model);
