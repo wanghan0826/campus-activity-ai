@@ -65,7 +65,7 @@ export default function AiSettingsDialog({ onClose }) {
           <div>
             <div className="grid h-11 w-11 place-items-center rounded-2xl bg-indigo-100 font-bold text-indigo-700">AI</div>
             <h2 id="ai-settings-title" className="mt-4 text-xl font-bold text-stone-900">AI 设置</h2>
-            <p className="mt-1 text-sm leading-6 text-stone-500">配置后即可解析“星期四”“下周五”等相对日期。</p>
+            <p className="mt-1 text-sm leading-6 text-stone-500">连接你的模型服务，用于生成活动方案与解析文档。</p>
           </div>
           <button type="button" onClick={onClose} className="rounded-full px-3 py-2 text-sm font-bold text-stone-400 hover:bg-stone-100 hover:text-stone-700">关闭</button>
         </div>

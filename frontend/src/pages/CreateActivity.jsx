@@ -91,7 +91,7 @@ export default function CreateActivity({ editingActivity, onActivityChanged, onC
             <div className="flex items-start gap-3">
               <BotAvatar />
               <div className="max-w-2xl rounded-2xl rounded-tl-md bg-indigo-50 px-4 py-3.5 text-sm leading-7 text-indigo-950 ring-1 ring-indigo-100">
-                告诉我活动类型、规模、时间和场景即可。例如：“下周五下午，初二学生趣味竞赛，120人，多功能厅，2小时”。系统会根据当天日期把“星期四”“下周五”等换算为具体日期；信息不足时，我会提示你补充。
+                简单描述你的活动需求，我会为你整理完整方案；如果还缺少关键信息，会继续向你确认。
               </div>
             </div>
 
