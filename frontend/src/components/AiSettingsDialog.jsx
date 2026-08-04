@@ -14,8 +14,8 @@ export default function AiSettingsDialog({ onClose }) {
   const [imageSettings, setImageSettings] = useState(null)
   const [chatApiKey, setChatApiKey] = useState('')
   const [imageApiKey, setImageApiKey] = useState('')
-  const [imageApiUrl, setImageApiUrl] = useState('https://api.openai.com/v1/images/generations')
-  const [imageModel, setImageModel] = useState('gpt-image-2')
+  const [imageApiUrl, setImageApiUrl] = useState('https://ark.cn-beijing.volces.com/api/v3/images/generations')
+  const [imageModel, setImageModel] = useState('doubao-seedream-4-0-250828')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState('')
   const [error, setError] = useState('')
@@ -26,8 +26,8 @@ export default function AiSettingsDialog({ onClose }) {
       .then(([chat, image]) => {
         setChatSettings(chat)
         setImageSettings(image)
-        setImageApiUrl(image.apiUrl || 'https://api.openai.com/v1/images/generations')
-        setImageModel(image.model || 'gpt-image-2')
+        setImageApiUrl(image.apiUrl || 'https://ark.cn-beijing.volces.com/api/v3/images/generations')
+        setImageModel(image.model || 'doubao-seedream-4-0-250828')
       })
       .catch((requestError) => setError(getApiErrorMessage(requestError, 'AI 配置读取失败')))
       .finally(() => setLoading(false))
@@ -136,8 +136,8 @@ export default function AiSettingsDialog({ onClose }) {
             </SettingsSection>
 
             <SettingsSection
-              title="封面生图"
-              description="用于根据封面描述生成活动图片"
+              title="封面生图 · Seedream"
+              description="火山方舟国产生图模型，与即梦同源"
               configured={imageSettings?.configured}
               maskedKey={imageSettings?.maskedKey}
               model={imageSettings?.model || imageModel}
@@ -149,11 +149,14 @@ export default function AiSettingsDialog({ onClose }) {
                 </label>
                 <label>
                   <span className="mb-1.5 block text-xs font-semibold text-stone-600">生图模型</span>
-                  <input value={imageModel} onChange={(event) => { setImageModel(event.target.value); resetFeedback() }} placeholder="gpt-image-2" className="form-input" />
+                  <input value={imageModel} onChange={(event) => { setImageModel(event.target.value); resetFeedback() }} placeholder="doubao-seedream-4-0-250828" className="form-input" />
                 </label>
                 <label>
-                  <span className="mb-1.5 block text-xs font-semibold text-stone-600">生图 API Key</span>
-                  <input type="password" autoComplete="off" value={imageApiKey} onChange={(event) => { setImageApiKey(event.target.value); resetFeedback() }} placeholder="输入 sk-..." className="form-input" />
+                  <span className="mb-1.5 flex items-center justify-between gap-2 text-xs font-semibold text-stone-600">
+                    <span>火山方舟 API Key</span>
+                    <a href="https://console.volcengine.com/ark/region:ark+cn-beijing/apikey" target="_blank" rel="noreferrer" className="font-semibold text-indigo-600 hover:text-indigo-800">获取 Key</a>
+                  </span>
+                  <input type="password" autoComplete="off" value={imageApiKey} onChange={(event) => { setImageApiKey(event.target.value); resetFeedback() }} placeholder="粘贴方舟 API Key" className="form-input" />
                 </label>
               </div>
               <div className="mt-3 flex flex-wrap justify-end gap-2">

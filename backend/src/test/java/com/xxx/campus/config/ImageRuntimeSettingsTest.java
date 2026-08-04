@@ -9,7 +9,7 @@ class ImageRuntimeSettingsTest {
     @Test
     void shouldKeepImageKeyOnlyInMemory() {
         ImageRuntimeSettings settings = new ImageRuntimeSettings(
-                "", "https://api.openai.com/v1/images/generations", "gpt-image-2");
+                "", "https://ark.cn-beijing.volces.com/api/v3/images/generations", "doubao-seedream-4-0-250828");
 
         assertThat(settings.isConfigured()).isFalse();
         settings.update("image-key-12345678", "http://localhost:9999/images", "image-model");

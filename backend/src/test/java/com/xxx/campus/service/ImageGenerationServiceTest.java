@@ -29,7 +29,7 @@ class ImageGenerationServiceTest {
     @Test
     void shouldCallProviderStoreBase64ImageAndReturnLocalUrl() throws Exception {
         String apiUrl = "https://image-provider.example/v1/images/generations";
-        ImageRuntimeSettings settings = new ImageRuntimeSettings("image-key", apiUrl, "gpt-image-2");
+        ImageRuntimeSettings settings = new ImageRuntimeSettings("image-key", apiUrl, "doubao-seedream-4-0-250828");
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         ImageGenerationService service = new ImageGenerationService(settings, new ObjectMapper(), builder);
@@ -39,8 +39,11 @@ class ImageGenerationServiceTest {
         server.expect(requestTo(apiUrl))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(header("Authorization", "Bearer image-key"))
-                .andExpect(jsonPath("$.model").value("gpt-image-2"))
-                .andExpect(jsonPath("$.size").value("1536x1024"))
+                .andExpect(jsonPath("$.model").value("doubao-seedream-4-0-250828"))
+                .andExpect(jsonPath("$.size").value("2K"))
+                .andExpect(jsonPath("$.sequential_image_generation").value("disabled"))
+                .andExpect(jsonPath("$.response_format").value("b64_json"))
+                .andExpect(jsonPath("$.watermark").value(false))
                 .andRespond(withSuccess("{\"data\":[{\"b64_json\":\"" + imageBase64 + "\"}]}", MediaType.APPLICATION_JSON));
 
         ImageGenerationResponse response = service.generate("校园音乐节");

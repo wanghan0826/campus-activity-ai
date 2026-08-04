@@ -47,9 +47,16 @@ public class ImageGenerationService {
         Map<String, Object> requestBody = new LinkedHashMap<>();
         requestBody.put("model", settings.getModel());
         requestBody.put("prompt", prompt.trim() + PROMPT_SUFFIX);
-        requestBody.put("size", "1536x1024");
-        requestBody.put("quality", "medium");
-        requestBody.put("output_format", "png");
+        if (isSeedreamModel()) {
+            requestBody.put("size", "2K");
+            requestBody.put("sequential_image_generation", "disabled");
+            requestBody.put("response_format", "b64_json");
+            requestBody.put("watermark", false);
+        } else {
+            requestBody.put("size", "1536x1024");
+            requestBody.put("quality", "medium");
+            requestBody.put("output_format", "png");
+        }
 
         try {
             String response = restClientBuilder.build()
@@ -124,6 +131,10 @@ public class ImageGenerationService {
 
     private Path storageDirectory() throws IOException {
         return Path.of(storagePath).toAbsolutePath().normalize();
+    }
+
+    private boolean isSeedreamModel() {
+        return settings.getModel().toLowerCase().startsWith("doubao-seedream");
     }
 
     private String extractProviderError(String responseBody) {

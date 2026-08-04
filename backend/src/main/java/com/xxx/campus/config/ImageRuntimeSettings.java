@@ -12,8 +12,8 @@ public class ImageRuntimeSettings {
     private volatile String model;
 
     public ImageRuntimeSettings(@Value("${ai.image.api-key:}") String apiKey,
-                                @Value("${ai.image.api-url:https://api.openai.com/v1/images/generations}") String apiUrl,
-                                @Value("${ai.image.model:gpt-image-2}") String model) {
+                                @Value("${ai.image.api-url:https://ark.cn-beijing.volces.com/api/v3/images/generations}") String apiUrl,
+                                @Value("${ai.image.model:doubao-seedream-4-0-250828}") String model) {
         this.apiKey = normalize(apiKey);
         this.apiUrl = normalize(apiUrl);
         this.model = normalize(model);
