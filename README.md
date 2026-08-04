@@ -5,6 +5,7 @@
 ## 已实现功能
 
 - AI 快速创建：解析活动大纲，生成标题、简介、时间、地点、流程、物料等结构化方案
+- AI 活动封面：根据方案中的画面描述生成横版封面，可预览、重新生成或改用已有图片
 - 多轮补充：信息不完整时继续输入，AI 重新整理方案
 - 相对日期识别：按 `Asia/Shanghai` 当天时间自动换算“星期四”“本周日”“下周五”等表达，公文含明确日期时以明确日期为准
 - 手动创建：保留传统表单入口
@@ -21,7 +22,7 @@
 - 前端：React 18、Vite 6、Tailwind CSS 4、Axios
 - 后端：Java 17、Spring Boot 3.2、Spring Data JPA
 - 数据库：MySQL 8（测试环境使用 H2）
-- AI：DeepSeek Chat Completions API
+- AI：DeepSeek Chat Completions API + OpenAI-compatible Image API
 
 ## 本地启动
 
@@ -44,6 +45,16 @@ mvn spring-boot:run
 后端默认地址：`http://localhost:8080`
 
 本地原型也可以启动后，在页面右上角打开“AI 设置”输入 DeepSeek API Key。通过页面输入的 Key 只保存在当前后端进程内存中，不写数据库、浏览器存储或项目文件，后端重启后会自动清除；状态接口只返回掩码，不返回明文。
+
+封面生图使用独立配置，可直接在“AI 设置”中填写生图接口地址、模型和 API Key。默认使用 OpenAI Images API 与 `gpt-image-2`；也可以通过环境变量配置：
+
+```powershell
+$env:AI_IMAGE_API_KEY="你的生图 API Key"
+$env:AI_IMAGE_API_URL="https://api.openai.com/v1/images/generations"
+$env:AI_IMAGE_MODEL="gpt-image-2"
+```
+
+生成的图片默认保存在后端运行目录的 `data/generated-covers`，该目录不会提交到 GitHub。生产环境建议替换为对象存储。
 
 ### 3. 启动前端
 
@@ -80,6 +91,11 @@ VITE_API_PROXY_TARGET=http://localhost:8080
 - `GET /api/ai/settings`：查询 AI Key 是否已配置（只返回掩码）
 - `PUT /api/ai/settings`：在当前后端进程内存中配置 API Key
 - `DELETE /api/ai/settings`：清除内存中的 API Key
+- `GET /api/ai/image-settings`：查询封面生图配置状态
+- `PUT /api/ai/image-settings`：配置生图接口、模型和 API Key
+- `DELETE /api/ai/image-settings`：清除内存中的生图 API Key
+- `POST /api/ai/images/generate`：根据提示词生成并保存活动封面
+- `GET /api/ai/images/{fileName}`：读取已生成的活动封面
 - `POST /api/activities`：保存活动草稿
 - `GET /api/activities`：分页查询个人活动
 - `GET /api/activities/stats`：活动状态统计

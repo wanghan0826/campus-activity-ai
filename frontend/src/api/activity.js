@@ -32,6 +32,25 @@ export async function clearAiSettings() {
   await api.delete('/ai/settings')
 }
 
+export async function getImageAiSettings() {
+  const { data } = await api.get('/ai/image-settings')
+  return data
+}
+
+export async function updateImageAiSettings({ apiKey, apiUrl, model }) {
+  const { data } = await api.put('/ai/image-settings', { apiKey, apiUrl, model })
+  return data
+}
+
+export async function clearImageAiSettings() {
+  await api.delete('/ai/image-settings')
+}
+
+export async function generateCoverImage(prompt) {
+  const { data } = await api.post('/ai/images/generate', { prompt }, { timeout: 180000 })
+  return data
+}
+
 export async function parseDocument(document) {
   const { data } = await api.post('/activities/parse', { document })
   return data

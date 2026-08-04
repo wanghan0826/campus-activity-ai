@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   createActivity,
+  generateCoverImage,
   getApiErrorMessage,
   submitActivity,
   updateActivity,
@@ -47,8 +48,7 @@ const FIELD_GROUPS = [
     description: 'AI 生成内容仅作初稿，提交审批前请人工确认',
     fields: [
       { key: 'content', label: '活动简介', type: 'textarea', required: true, wide: true, placeholder: '介绍活动背景、内容和参与方式' },
-      { key: 'coverImagePrompt', label: 'AI 封面描述', type: 'textarea', wide: true, placeholder: '用于后续生成活动封面图' },
-      { key: 'coverImage', label: '封面图片地址', wide: true, placeholder: '可粘贴已上传图片的 URL' },
+      { key: 'coverImagePrompt', label: '封面画面描述', type: 'textarea', wide: true, placeholder: '例如：青春活力的校园夜跑，蓝紫色灯光，学生在操场奔跑，横版构图' },
       { key: 'budget', label: '预估预算（元）', type: 'number', placeholder: '0' },
     ],
   },
@@ -137,6 +137,7 @@ export default function ActivityCard({
   const [view, setView] = useState('edit')
   const [approvalMessage, setApprovalMessage] = useState(parsedResult.approvalMessage || '')
   const [submitting, setSubmitting] = useState('')
+  const [generatingImage, setGeneratingImage] = useState(false)
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
 
@@ -162,6 +163,28 @@ export default function ActivityCard({
     setActivity((current) => ({ ...current, [key]: value }))
     setSuccess('')
     setError('')
+  }
+
+  const handleGenerateCover = async () => {
+    const prompt = activity.coverImagePrompt?.trim()
+      || [activity.title, activity.content].filter(Boolean).join('。').trim()
+    if (!prompt) {
+      setError('请先填写活动标题或封面画面描述')
+      return
+    }
+
+    setGeneratingImage(true)
+    setError('')
+    setSuccess('')
+    try {
+      const generated = await generateCoverImage(prompt)
+      updateField('coverImage', generated.imageUrl)
+      setSuccess('活动封面已生成，可以在学生视角中预览')
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, '封面生成失败，请稍后重试'))
+    } finally {
+      setGeneratingImage(false)
+    }
   }
 
   const persistDraft = async () => {
@@ -262,6 +285,14 @@ export default function ActivityCard({
                   />
                 ))}
               </div>
+              {group.title === '方案内容' && (
+                <CoverImageEditor
+                  imageUrl={activity.coverImage}
+                  generating={generatingImage}
+                  onGenerate={handleGenerateCover}
+                  onImageUrlChange={(value) => updateField('coverImage', value)}
+                />
+              )}
             </section>
           ))}
 
@@ -390,6 +421,34 @@ function Field({ field, value, missing, onChange }) {
 
 function ViewButton({ active, onClick, children }) {
   return <button type="button" onClick={onClick} className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${active ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500 hover:text-stone-800'}`}>{children}</button>
+}
+
+function CoverImageEditor({ imageUrl, generating, onGenerate, onImageUrlChange }) {
+  return (
+    <div className="mt-4 overflow-hidden rounded-2xl border border-stone-200 bg-stone-50 sm:col-span-2">
+      <div className="grid gap-0 sm:grid-cols-[220px_1fr]">
+        <div className="relative min-h-36 overflow-hidden bg-gradient-to-br from-indigo-950 via-violet-900 to-emerald-800">
+          {imageUrl ? (
+            <img src={imageUrl} alt="活动封面预览" className="absolute inset-0 h-full w-full object-cover" />
+          ) : (
+            <div className="grid h-full min-h-36 place-items-center px-4 text-center text-xs leading-5 text-white/65">生成后的活动封面会显示在这里</div>
+          )}
+        </div>
+        <div className="p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div><h4 className="text-sm font-bold text-stone-900">活动封面</h4><p className="mt-1 text-xs leading-5 text-stone-500">根据上方画面描述生成，也可以使用已有图片。</p></div>
+            <button type="button" onClick={onGenerate} disabled={generating} className="rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-wait disabled:opacity-60">
+              {generating ? '正在生成封面…' : imageUrl ? '重新生成' : 'AI 生成封面'}
+            </button>
+          </div>
+          <div className="mt-3 flex gap-2">
+            <input value={imageUrl || ''} onChange={(event) => onImageUrlChange(event.target.value)} placeholder="或粘贴已有图片地址" className="form-input flex-1 bg-white text-xs" />
+            {imageUrl && <button type="button" onClick={() => onImageUrlChange('')} className="rounded-xl px-3 text-xs font-semibold text-stone-400 hover:bg-red-50 hover:text-red-600">移除</button>}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function SectionHeader({ title, description, children }) {
