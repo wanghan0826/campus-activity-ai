@@ -79,6 +79,23 @@ VITE_API_PROXY_TARGET=http://localhost:8080
 
 正式环境应由登录网关根据企业微信身份写入这些请求头，不能信任浏览器自行传入的角色。
 
+## Android 测试包
+
+项目已使用 Capacitor 封装 Android 客户端。APK 内包含前端页面，审批、AI 解析和生图仍需连接本项目后端。
+
+构建前先填写手机能够访问的后端地址（手机和电脑在同一网络时可使用电脑的局域网 IP）：
+
+```powershell
+cd frontend
+$env:VITE_API_BASE_URL="http://电脑局域网IP:后端端口"
+npm run build
+npx cap sync android
+cd android
+.\gradlew.bat assembleDebug
+```
+
+生成文件位于 `frontend/android/app/build/outputs/apk/debug/app-debug.apk`。正式部署时请把 `VITE_API_BASE_URL` 替换为 HTTPS 后端域名，并使用正式签名生成 release 包。
+
 ## 审批状态流转
 
 `DRAFT/REJECTED → PENDING_APPROVAL（学院审核老师）→ PENDING_APPROVAL（学院领导）→ APPROVED → PUBLISHED`

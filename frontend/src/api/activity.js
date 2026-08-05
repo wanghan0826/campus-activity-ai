@@ -1,7 +1,9 @@
 import axios from 'axios'
 
+const configuredApiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '')
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: configuredApiBaseUrl ? `${configuredApiBaseUrl}/api` : '/api',
   timeout: 60000,
   headers: {
     'Content-Type': 'application/json',
@@ -123,7 +125,7 @@ export function getApiErrorMessage(error, fallback = '请求失败，请稍后�
   if (!error.response) {
     return error.code === 'ECONNABORTED'
       ? '请求超时，请稍后重试'
-      : '无法连接后端服务，请确认后端已在 8080 端口启动'
+      : '无法连接后端服务，请确认电脑后端已启动且设备处于同一网络'
   }
 
   const body = error.response.data

@@ -23,6 +23,9 @@ mysql_data/
 data/
 backend/data/
 
+# 本地生成的 Android 测试安装包
+releases/*.apk
+
 # OS
 .DS_Store
 Thumbs.db
