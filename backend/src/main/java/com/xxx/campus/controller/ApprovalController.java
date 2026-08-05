@@ -3,11 +3,13 @@ package com.xxx.campus.controller;
 import com.xxx.campus.model.Activity;
 import com.xxx.campus.model.ApprovalActionRequest;
 import com.xxx.campus.model.ApprovalRecord;
+import com.xxx.campus.security.AuthenticatedUser;
 import com.xxx.campus.service.ApprovalService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,39 +27,41 @@ public class ApprovalController {
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestHeader("X-User-Role") String role,
-            @RequestHeader("X-User-College") String college) {
-        return ResponseEntity.ok(approvalService.listPendingTasks(role, college, keyword, page, size));
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        return ResponseEntity.ok(approvalService.listPendingTasks(user.role(), user.collegeCode(), keyword, page, size));
     }
 
     @GetMapping("/{activityId}/history")
     public ResponseEntity<List<ApprovalRecord>> getHistory(
             @PathVariable Long activityId,
-            @RequestHeader(value = "X-User-Id", defaultValue = "test_teacher_001") String userId,
-            @RequestHeader(value = "X-User-Role", defaultValue = "PUBLISHER") String role,
-            @RequestHeader(value = "X-User-College", defaultValue = "INFORMATION_ENGINEERING") String college) {
-        return ResponseEntity.ok(approvalService.getHistory(activityId, userId, role, college));
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        return ResponseEntity.ok(approvalService.getHistory(
+                activityId, user.userId(), user.role(), user.collegeCode()));
     }
 
     @PostMapping("/{activityId}/approve")
     public ResponseEntity<Activity> approve(
             @PathVariable Long activityId,
             @Valid @RequestBody(required = false) ApprovalActionRequest request,
-            @RequestHeader("X-User-Id") String userId,
-            @RequestHeader("X-User-Role") String role,
-            @RequestHeader("X-User-College") String college) {
+            @AuthenticationPrincipal AuthenticatedUser user) {
         return ResponseEntity.ok(approvalService.approve(
-                activityId, request == null ? null : request.getComment(), userId, role, college));
+                activityId,
+                request == null ? null : request.getComment(),
+                user.userId(),
+                user.role(),
+                user.collegeCode()));
     }
 
     @PostMapping("/{activityId}/reject")
     public ResponseEntity<Activity> reject(
             @PathVariable Long activityId,
             @Valid @RequestBody ApprovalActionRequest request,
-            @RequestHeader("X-User-Id") String userId,
-            @RequestHeader("X-User-Role") String role,
-            @RequestHeader("X-User-College") String college) {
+            @AuthenticationPrincipal AuthenticatedUser user) {
         return ResponseEntity.ok(approvalService.reject(
-                activityId, request.getComment(), userId, role, college));
+                activityId,
+                request.getComment(),
+                user.userId(),
+                user.role(),
+                user.collegeCode()));
     }
 }

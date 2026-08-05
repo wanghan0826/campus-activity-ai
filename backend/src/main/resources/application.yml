@@ -5,6 +5,9 @@ spring:
   application:
     name: campus-activity
 
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+
   datasource:
     url: jdbc:mysql://localhost:3306/campus_activity?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8
     username: root
@@ -18,6 +21,16 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+# ---- 登录与权限 ----
+auth:
+  session-hours: ${AUTH_SESSION_HOURS:12}
+  bootstrap:
+    enabled: ${AUTH_BOOTSTRAP_ENABLED:true}
+    publisher-password: ${AUTH_PUBLISHER_PASSWORD:publisher123}
+    reviewer-password: ${AUTH_REVIEWER_PASSWORD:reviewer123}
+    leader-password: ${AUTH_LEADER_PASSWORD:leader123}
+    student-password: ${AUTH_STUDENT_PASSWORD:student123}
 
 # ---- AI 配置 ----
 ai:

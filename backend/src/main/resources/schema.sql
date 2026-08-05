@@ -2,6 +2,41 @@
 -- xxx 校园活动平台 - 数据库初始化
 -- ============================================
 
+CREATE TABLE IF NOT EXISTS app_user (
+    id               BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id          VARCHAR(100) NOT NULL,
+    username         VARCHAR(100) NOT NULL,
+    password_hash    VARCHAR(100),
+    display_name     VARCHAR(100) NOT NULL,
+    role             VARCHAR(30)  NOT NULL COMMENT 'PUBLISHER/COLLEGE_REVIEWER/COLLEGE_LEADER/STUDENT',
+    college_code     VARCHAR(100) NOT NULL,
+    college_name     VARCHAR(100) NOT NULL,
+    auth_source      VARCHAR(30)  NOT NULL DEFAULT 'LOCAL' COMMENT 'LOCAL/SCHOOL_SSO',
+    external_subject VARCHAR(200) COMMENT '学校统一身份认证返回的稳定用户标识',
+    enabled          BOOLEAN      NOT NULL DEFAULT TRUE,
+    last_login_at    DATETIME,
+    created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_user_user_id (user_id),
+    UNIQUE KEY uk_user_username (username),
+    UNIQUE KEY uk_user_external_identity (auth_source, external_subject),
+    INDEX idx_user_role (role),
+    INDEX idx_user_college (college_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='系统用户';
+
+CREATE TABLE IF NOT EXISTS user_session (
+    id              BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_account_id BIGINT      NOT NULL,
+    token_hash      VARCHAR(64) NOT NULL,
+    expires_at      DATETIME    NOT NULL,
+    revoked         BOOLEAN     NOT NULL DEFAULT FALSE,
+    created_at      DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_session_token_hash (token_hash),
+    INDEX idx_session_user (user_account_id),
+    INDEX idx_session_expires (expires_at),
+    CONSTRAINT fk_session_user FOREIGN KEY (user_account_id) REFERENCES app_user(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户登录会话';
+
 CREATE TABLE IF NOT EXISTS activity (
     id               BIGINT PRIMARY KEY AUTO_INCREMENT,
     title            VARCHAR(200)  COMMENT '活动标题，草稿阶段允许为空',

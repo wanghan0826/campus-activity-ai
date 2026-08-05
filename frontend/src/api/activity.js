@@ -1,23 +1,64 @@
 import axios from 'axios'
 
 const configuredApiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '')
+const AUTH_TOKEN_KEY = 'campus_activity_auth_token'
 
 const api = axios.create({
   baseURL: configuredApiBaseUrl ? `${configuredApiBaseUrl}/api` : '/api',
   timeout: 60000,
   headers: {
     'Content-Type': 'application/json',
-    // 企业微信登录接入前的本地身份占位，正式环境由登录态提供。
-    'X-User-Id': 'test_teacher_001',
-    'X-User-Role': 'PUBLISHER',
-    'X-User-College': 'INFORMATION_ENGINEERING',
   },
 })
 
-export function setApiIdentity({ id, role, college }) {
-  api.defaults.headers['X-User-Id'] = id
-  api.defaults.headers['X-User-Role'] = role
-  api.defaults.headers['X-User-College'] = college
+const initialToken = window.localStorage.getItem(AUTH_TOKEN_KEY)
+if (initialToken) api.defaults.headers.Authorization = `Bearer ${initialToken}`
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const isLoginRequest = String(error.config?.url || '').includes('/auth/login')
+    if (error.response?.status === 401 && !isLoginRequest) {
+      setAuthToken(null)
+      window.dispatchEvent(new Event('campus-auth-expired'))
+    }
+    return Promise.reject(error)
+  },
+)
+
+export function setAuthToken(token) {
+  if (token) {
+    window.localStorage.setItem(AUTH_TOKEN_KEY, token)
+    api.defaults.headers.Authorization = `Bearer ${token}`
+  } else {
+    window.localStorage.removeItem(AUTH_TOKEN_KEY)
+    delete api.defaults.headers.Authorization
+  }
+}
+
+export function hasStoredAuthToken() {
+  return Boolean(window.localStorage.getItem(AUTH_TOKEN_KEY))
+}
+
+export async function login(username, password) {
+  const { data } = await api.post('/auth/login', { username, password })
+  setAuthToken(data.token)
+  return data
+}
+
+export async function getCurrentUser() {
+  const { data } = await api.get('/auth/me')
+  return data
+}
+
+export async function logout() {
+  try {
+    await api.post('/auth/logout')
+  } catch {
+    // 即使后端会话已失效，也要清除设备上的本地登录态。
+  } finally {
+    setAuthToken(null)
+  }
 }
 
 export function resolveApiAssetUrl(value) {

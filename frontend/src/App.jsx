@@ -1,26 +1,61 @@
-import { useState } from 'react'
-import { setApiIdentity } from './api/activity.js'
+import { useEffect, useState } from 'react'
+import { getCurrentUser, hasStoredAuthToken, logout } from './api/activity.js'
 import AiSettingsDialog from './components/AiSettingsDialog.jsx'
 import ApprovalWorkbench from './pages/ApprovalWorkbench.jsx'
 import ActivityManagement from './pages/ActivityManagement.jsx'
 import CreateActivity from './pages/CreateActivity.jsx'
+import LoginPage from './pages/LoginPage.jsx'
 import StudentActivities from './pages/StudentActivities.jsx'
 
-const DEMO_IDENTITIES = [
-  { id: 'test_teacher_001', role: 'PUBLISHER', college: 'INFORMATION_ENGINEERING', collegeName: '信息工程学院', name: '活动发布人', short: '发' },
-  { id: 'review_teacher_001', role: 'COLLEGE_REVIEWER', college: 'INFORMATION_ENGINEERING', collegeName: '信息工程学院', name: '学院审核老师', short: '审' },
-  { id: 'college_leader_001', role: 'COLLEGE_LEADER', college: 'INFORMATION_ENGINEERING', collegeName: '信息工程学院', name: '学院领导', short: '领' },
-  { id: 'student_001', role: 'STUDENT', college: 'INFORMATION_ENGINEERING', collegeName: '信息工程学院', name: '学生', short: '学' },
-]
+const ROLE_LABELS = { PUBLISHER: '活动发布人', COLLEGE_REVIEWER: '学院审核老师', COLLEGE_LEADER: '学院领导', STUDENT: '学生' }
+
+function homePageForRole(role) {
+  if (role === 'STUDENT') return 'studentActivities'
+  if (role === 'PUBLISHER') return 'manage'
+  return 'approvals'
+}
 
 export default function App() {
-  const [page, setPage] = useState('create')
+  const [page, setPage] = useState('manage')
   const [editingActivity, setEditingActivity] = useState(null)
-  const [identity, setIdentity] = useState(DEMO_IDENTITIES[0])
+  const [user, setUser] = useState(null)
+  const [authLoading, setAuthLoading] = useState(true)
   const [showAiSettings, setShowAiSettings] = useState(false)
-  const isPublisher = identity.role === 'PUBLISHER'
-  const isStudent = identity.role === 'STUDENT'
+  const isPublisher = user?.role === 'PUBLISHER'
+  const isStudent = user?.role === 'STUDENT'
   const hasMobileNav = isPublisher || isStudent
+
+  useEffect(() => {
+    let active = true
+    const restoreSession = async () => {
+      if (!hasStoredAuthToken()) {
+        setAuthLoading(false)
+        return
+      }
+      try {
+        const currentUser = await getCurrentUser()
+        if (active) {
+          setUser(currentUser)
+          setPage(homePageForRole(currentUser.role))
+        }
+      } catch {
+        if (active) setUser(null)
+      } finally {
+        if (active) setAuthLoading(false)
+      }
+    }
+    const handleExpired = () => {
+      setUser(null)
+      setEditingActivity(null)
+      setShowAiSettings(false)
+    }
+    window.addEventListener('campus-auth-expired', handleExpired)
+    restoreSession()
+    return () => {
+      active = false
+      window.removeEventListener('campus-auth-expired', handleExpired)
+    }
+  }, [])
 
   const navigate = (nextPage) => {
     setEditingActivity(null)
@@ -28,12 +63,17 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const changeIdentity = (id) => {
-    const next = DEMO_IDENTITIES.find((item) => item.id === id) || DEMO_IDENTITIES[0]
-    setIdentity(next)
-    setApiIdentity(next)
+  const handleLogin = (loggedInUser) => {
+    setUser(loggedInUser)
+    setPage(homePageForRole(loggedInUser.role))
     setEditingActivity(null)
-    setPage(next.role === 'PUBLISHER' ? 'manage' : next.role === 'STUDENT' ? 'studentActivities' : 'approvals')
+  }
+
+  const handleLogout = async () => {
+    await logout()
+    setUser(null)
+    setEditingActivity(null)
+    setShowAiSettings(false)
   }
 
   const editActivity = (activity) => {
@@ -41,6 +81,12 @@ export default function App() {
     setPage('create')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
+
+  if (authLoading) {
+    return <div className="grid min-h-screen place-items-center bg-[#f4f4f7] text-sm font-semibold text-stone-400">正在进入校园活动平台…</div>
+  }
+
+  if (!user) return <LoginPage onLogin={handleLogin} />
 
   return (
     <div className={`min-h-screen bg-[#f7f7f8] text-stone-900 ${hasMobileNav ? 'pb-[calc(4.25rem+env(safe-area-inset-bottom))] sm:pb-0' : ''}`}>
@@ -67,15 +113,13 @@ export default function App() {
             )}
           </nav>
 
-          <div className="flex w-full items-center gap-2 border-t border-stone-100 pt-2 sm:w-auto sm:border-0 sm:pt-0">
-            {!isStudent && <button type="button" onClick={() => setShowAiSettings(true)} className="shrink-0 whitespace-nowrap rounded-full border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700 hover:bg-indigo-100">AI 设置</button>}
-            <label className="flex min-w-0 flex-1 items-center gap-2 rounded-full border border-stone-200 bg-white py-1.5 pl-1.5 pr-2 sm:flex-none">
-              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">{identity.short}</span>
-              <span className="sr-only">切换演示身份</span>
-              <select value={identity.id} onChange={(event) => changeIdentity(event.target.value)} className="min-w-0 flex-1 bg-transparent text-xs font-semibold text-stone-700 outline-none sm:flex-none">
-                {DEMO_IDENTITIES.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-              </select>
-            </label>
+          <div className="flex w-full items-center justify-end gap-2 border-t border-stone-100 pt-2 sm:w-auto sm:border-0 sm:pt-0">
+            {isPublisher && <button type="button" onClick={() => setShowAiSettings(true)} className="shrink-0 whitespace-nowrap rounded-full border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700 hover:bg-indigo-100">AI 设置</button>}
+            <div className="flex min-w-0 items-center gap-2 rounded-full border border-stone-200 bg-white py-1.5 pl-1.5 pr-3">
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">{user.displayName?.slice(0, 1) || '用'}</span>
+              <span className="min-w-0"><span className="block max-w-24 truncate text-xs font-bold text-stone-700">{user.displayName}</span><span className="hidden text-[10px] text-stone-400 sm:block">{ROLE_LABELS[user.role] || user.role}</span></span>
+            </div>
+            <button type="button" onClick={handleLogout} className="shrink-0 rounded-full px-3 py-2 text-xs font-bold text-stone-500 hover:bg-stone-100 hover:text-stone-800">退出</button>
           </div>
         </div>
       </header>
@@ -88,7 +132,7 @@ export default function App() {
         ) : page === 'manage' && isPublisher ? (
           <ActivityManagement onCreate={() => navigate('create')} onEdit={editActivity} />
         ) : (
-          <ApprovalWorkbench identity={identity} />
+          <ApprovalWorkbench identity={user} />
         )}
       </main>
 
