@@ -3,6 +3,7 @@ import {
   createActivity,
   generateCoverImage,
   getApiErrorMessage,
+  resolveApiAssetUrl,
   submitActivity,
   updateActivity,
 } from '../api/activity.js'
@@ -429,7 +430,7 @@ function CoverImageEditor({ imageUrl, generating, onGenerate, onImageUrlChange }
       <div className="grid gap-0 sm:grid-cols-[220px_1fr]">
         <div className="relative min-h-36 overflow-hidden bg-gradient-to-br from-indigo-950 via-violet-900 to-emerald-800">
           {imageUrl ? (
-            <img src={imageUrl} alt="活动封面预览" className="absolute inset-0 h-full w-full object-cover" />
+            <img src={resolveApiAssetUrl(imageUrl)} alt="活动封面预览" className="absolute inset-0 h-full w-full object-cover" />
           ) : (
             <div className="grid h-full min-h-36 place-items-center px-4 text-center text-xs leading-5 text-white/65">生成后的活动封面会显示在这里</div>
           )}

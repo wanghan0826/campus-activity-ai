@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import jakarta.persistence.LockModeType;
 import java.util.List;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 public interface ActivityRepository extends JpaRepository<Activity, Long> {
@@ -54,4 +55,20 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
                                        @Param("college") String college,
                                        @Param("keyword") String keyword,
                                        Pageable pageable);
+
+    @Query("""
+            select a from Activity a
+            where a.status = 'PUBLISHED'
+              and (a.offlineTime is null or a.offlineTime > :now)
+              and (:category is null or a.category = :category)
+              and (:keyword is null
+                   or lower(a.title) like lower(concat('%', :keyword, '%'))
+                   or lower(coalesce(a.location, '')) like lower(concat('%', :keyword, '%'))
+                   or lower(coalesce(a.organizer, '')) like lower(concat('%', :keyword, '%')))
+            order by case when a.startTime is null then 1 else 0 end, a.startTime asc, a.id desc
+            """)
+    Page<Activity> searchPublishedActivities(@Param("category") String category,
+                                              @Param("keyword") String keyword,
+                                              @Param("now") LocalDateTime now,
+                                              Pageable pageable);
 }

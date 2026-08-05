@@ -1,3 +1,5 @@
+import { resolveApiAssetUrl } from '../api/activity.js'
+
 const CATEGORY_LABELS = {
   ART: '艺术类',
   SPORTS: '艺体类',
@@ -32,7 +34,7 @@ export default function ActivityPreview({ activity = {}, compact = false }) {
     <div className={`overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm sm:rounded-3xl ${compact ? 'max-w-2xl' : ''}`}>
       <div className="relative min-h-44 overflow-hidden bg-gradient-to-br from-indigo-950 via-violet-900 to-emerald-800 px-5 py-6 text-white sm:min-h-48 sm:px-8 sm:py-7">
         {activity.coverImage ? (
-          <img src={activity.coverImage} alt="活动封面" className="absolute inset-0 h-full w-full object-cover opacity-55" />
+          <img src={resolveApiAssetUrl(activity.coverImage)} alt="活动封面" className="absolute inset-0 h-full w-full object-cover opacity-55" />
         ) : (
           <div className="absolute inset-0 opacity-30 [background-image:radial-gradient(circle_at_20%_20%,white_0,transparent_28%),radial-gradient(circle_at_80%_10%,#fcd34d_0,transparent_22%)]" />
         )}

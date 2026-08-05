@@ -20,6 +20,11 @@ export function setApiIdentity({ id, role, college }) {
   api.defaults.headers['X-User-College'] = college
 }
 
+export function resolveApiAssetUrl(value) {
+  if (!value || !configuredApiBaseUrl || !String(value).startsWith('/api/')) return value
+  return `${configuredApiBaseUrl}${value}`
+}
+
 export async function getAiSettings() {
   const { data } = await api.get('/ai/settings')
   return data
@@ -119,6 +124,33 @@ export async function duplicateActivity(id) {
 
 export async function deleteActivity(id) {
   await api.delete(`/activities/${id}`)
+}
+
+export async function getStudentActivities({ category = '', keyword = '', page = 0, size = 30 } = {}) {
+  const { data } = await api.get('/student/activities', {
+    params: { category: category || undefined, keyword: keyword || undefined, page, size },
+  })
+  return data
+}
+
+export async function getStudentActivity(id) {
+  const { data } = await api.get(`/student/activities/${id}`)
+  return data
+}
+
+export async function getMyRegistrations() {
+  const { data } = await api.get('/student/registrations')
+  return data
+}
+
+export async function registerForActivity(id) {
+  const { data } = await api.post(`/student/activities/${id}/registrations`)
+  return data
+}
+
+export async function cancelActivityRegistration(id) {
+  const { data } = await api.delete(`/student/activities/${id}/registrations`)
+  return data
 }
 
 export function getApiErrorMessage(error, fallback = '请求失败，请稍后重试') {

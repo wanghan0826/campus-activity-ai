@@ -4,11 +4,13 @@ import AiSettingsDialog from './components/AiSettingsDialog.jsx'
 import ApprovalWorkbench from './pages/ApprovalWorkbench.jsx'
 import ActivityManagement from './pages/ActivityManagement.jsx'
 import CreateActivity from './pages/CreateActivity.jsx'
+import StudentActivities from './pages/StudentActivities.jsx'
 
 const DEMO_IDENTITIES = [
   { id: 'test_teacher_001', role: 'PUBLISHER', college: 'INFORMATION_ENGINEERING', collegeName: '信息工程学院', name: '活动发布人', short: '发' },
   { id: 'review_teacher_001', role: 'COLLEGE_REVIEWER', college: 'INFORMATION_ENGINEERING', collegeName: '信息工程学院', name: '学院审核老师', short: '审' },
   { id: 'college_leader_001', role: 'COLLEGE_LEADER', college: 'INFORMATION_ENGINEERING', collegeName: '信息工程学院', name: '学院领导', short: '领' },
+  { id: 'student_001', role: 'STUDENT', college: 'INFORMATION_ENGINEERING', collegeName: '信息工程学院', name: '学生', short: '学' },
 ]
 
 export default function App() {
@@ -17,6 +19,8 @@ export default function App() {
   const [identity, setIdentity] = useState(DEMO_IDENTITIES[0])
   const [showAiSettings, setShowAiSettings] = useState(false)
   const isPublisher = identity.role === 'PUBLISHER'
+  const isStudent = identity.role === 'STUDENT'
+  const hasMobileNav = isPublisher || isStudent
 
   const navigate = (nextPage) => {
     setEditingActivity(null)
@@ -29,7 +33,7 @@ export default function App() {
     setIdentity(next)
     setApiIdentity(next)
     setEditingActivity(null)
-    setPage(next.role === 'PUBLISHER' ? 'manage' : 'approvals')
+    setPage(next.role === 'PUBLISHER' ? 'manage' : next.role === 'STUDENT' ? 'studentActivities' : 'approvals')
   }
 
   const editActivity = (activity) => {
@@ -39,12 +43,12 @@ export default function App() {
   }
 
   return (
-    <div className={`min-h-screen bg-[#f7f7f8] text-stone-900 ${isPublisher ? 'pb-[calc(4.25rem+env(safe-area-inset-bottom))] sm:pb-0' : ''}`}>
+    <div className={`min-h-screen bg-[#f7f7f8] text-stone-900 ${hasMobileNav ? 'pb-[calc(4.25rem+env(safe-area-inset-bottom))] sm:pb-0' : ''}`}>
       <header className="sticky top-0 z-40 border-b border-stone-200/80 bg-white/90 px-3 py-2.5 backdrop-blur-xl sm:px-6 sm:py-3">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 sm:flex-nowrap sm:gap-4">
-          <button type="button" onClick={() => navigate(isPublisher ? 'create' : 'approvals')} className="flex min-w-0 flex-1 items-center gap-2.5 text-left sm:flex-none sm:gap-3">
+          <button type="button" onClick={() => navigate(isPublisher ? 'create' : isStudent ? 'studentActivities' : 'approvals')} className="flex min-w-0 flex-1 items-center gap-2.5 text-left sm:flex-none sm:gap-3">
             <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-indigo-600 to-violet-700 text-base font-bold text-white shadow-sm sm:h-10 sm:w-10 sm:rounded-2xl sm:text-lg">校</div>
-            <div className="min-w-0"><div className="truncate text-sm font-bold tracking-wide text-stone-950 sm:text-base">学院活动工作台</div><div className="truncate text-[10px] text-stone-400 sm:text-[11px]">发布与两级审批</div></div>
+            <div className="min-w-0"><div className="truncate text-sm font-bold tracking-wide text-stone-950 sm:text-base">{isStudent ? '校园活动中心' : '学院活动工作台'}</div><div className="truncate text-[10px] text-stone-400 sm:text-[11px]">{isStudent ? '发现活动 · 在线报名' : '发布与两级审批'}</div></div>
           </button>
 
           <nav className="hidden items-center gap-1 rounded-xl bg-stone-100 p-1 sm:flex">
@@ -53,13 +57,18 @@ export default function App() {
                 <NavButton active={page === 'create'} onClick={() => navigate('create')}>创建活动</NavButton>
                 <NavButton active={page === 'manage'} onClick={() => navigate('manage')}>活动管理</NavButton>
               </>
+            ) : isStudent ? (
+              <>
+                <NavButton active={page === 'studentActivities'} onClick={() => navigate('studentActivities')}>活动广场</NavButton>
+                <NavButton active={page === 'studentRegistrations'} onClick={() => navigate('studentRegistrations')}>我的报名</NavButton>
+              </>
             ) : (
               <NavButton active onClick={() => navigate('approvals')}>审批工作台</NavButton>
             )}
           </nav>
 
           <div className="flex w-full items-center gap-2 border-t border-stone-100 pt-2 sm:w-auto sm:border-0 sm:pt-0">
-            <button type="button" onClick={() => setShowAiSettings(true)} className="shrink-0 whitespace-nowrap rounded-full border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700 hover:bg-indigo-100">AI 设置</button>
+            {!isStudent && <button type="button" onClick={() => setShowAiSettings(true)} className="shrink-0 whitespace-nowrap rounded-full border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700 hover:bg-indigo-100">AI 设置</button>}
             <label className="flex min-w-0 flex-1 items-center gap-2 rounded-full border border-stone-200 bg-white py-1.5 pl-1.5 pr-2 sm:flex-none">
               <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">{identity.short}</span>
               <span className="sr-only">切换演示身份</span>
@@ -72,7 +81,9 @@ export default function App() {
       </header>
 
       <main>
-        {page === 'create' && isPublisher ? (
+        {isStudent ? (
+          <StudentActivities section={page === 'studentRegistrations' ? 'registrations' : 'activities'} onNavigate={(section) => navigate(section === 'registrations' ? 'studentRegistrations' : 'studentActivities')} />
+        ) : page === 'create' && isPublisher ? (
           <CreateActivity editingActivity={editingActivity} onActivityChanged={(activity, type) => { if (type === 'submitted') navigate('manage') }} onCancelEdit={() => navigate('manage')} />
         ) : page === 'manage' && isPublisher ? (
           <ActivityManagement onCreate={() => navigate('create')} onEdit={editActivity} />
@@ -81,10 +92,19 @@ export default function App() {
         )}
       </main>
 
-      {isPublisher && (
+      {hasMobileNav && (
         <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-2 border-t border-stone-200 bg-white/95 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(28,25,23,0.06)] backdrop-blur sm:hidden">
-          <MobileNav active={page === 'create'} onClick={() => navigate('create')} icon="＋">创建活动</MobileNav>
-          <MobileNav active={page === 'manage'} onClick={() => navigate('manage')} icon="☷">活动管理</MobileNav>
+          {isStudent ? (
+            <>
+              <MobileNav active={page === 'studentActivities'} onClick={() => navigate('studentActivities')} icon="◇">活动广场</MobileNav>
+              <MobileNav active={page === 'studentRegistrations'} onClick={() => navigate('studentRegistrations')} icon="✓">我的报名</MobileNav>
+            </>
+          ) : (
+            <>
+              <MobileNav active={page === 'create'} onClick={() => navigate('create')} icon="＋">创建活动</MobileNav>
+              <MobileNav active={page === 'manage'} onClick={() => navigate('manage')} icon="☷">活动管理</MobileNav>
+            </>
+          )}
         </nav>
       )}
       {showAiSettings && <AiSettingsDialog onClose={() => setShowAiSettings(false)} />}

@@ -85,3 +85,17 @@ CREATE TABLE IF NOT EXISTS activity_approval_record (
     INDEX idx_approval_operator (operator_id),
     CONSTRAINT fk_approval_activity FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='活动审批轨迹';
+
+CREATE TABLE IF NOT EXISTS activity_registration (
+    id          BIGINT PRIMARY KEY AUTO_INCREMENT,
+    activity_id BIGINT       NOT NULL,
+    student_id  VARCHAR(100) NOT NULL,
+    status      VARCHAR(20)  NOT NULL COMMENT 'PENDING/APPROVED/CANCELLED',
+    created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_registration_activity_student (activity_id, student_id),
+    INDEX idx_registration_activity (activity_id),
+    INDEX idx_registration_student (student_id),
+    INDEX idx_registration_status (status),
+    CONSTRAINT fk_registration_activity FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='学生活动报名记录';
