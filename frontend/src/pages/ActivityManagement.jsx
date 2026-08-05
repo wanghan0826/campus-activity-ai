@@ -105,7 +105,7 @@ export default function ActivityManagement({ onCreate, onEdit }) {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6 sm:py-10">
+    <div className="mx-auto max-w-7xl px-3 py-5 sm:px-6 sm:py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="mb-2 flex items-center gap-2 text-xs font-bold text-indigo-600">
@@ -115,14 +115,14 @@ export default function ActivityManagement({ onCreate, onEdit }) {
           <h1 className="text-2xl font-bold tracking-tight text-stone-950 sm:text-3xl">活动管理</h1>
           <p className="mt-2 text-sm text-stone-500">统一查看草稿、审批进度和发布状态。</p>
         </div>
-        <button type="button" onClick={onCreate} className="rounded-xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-700">+ 创建活动</button>
+        <button type="button" onClick={onCreate} className="w-full rounded-xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-700 sm:w-auto">+ 创建活动</button>
       </div>
 
-      <div className="mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-6 grid grid-cols-2 gap-2.5 sm:mt-7 sm:gap-3 xl:grid-cols-4">
         {summaryCards.map((card) => <SummaryCard key={card.label} {...card} />)}
       </div>
 
-      <section className="mt-6 overflow-hidden rounded-[24px] border border-stone-200 bg-white shadow-sm">
+      <section className="mt-5 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm sm:mt-6 sm:rounded-[24px]">
         <div className="border-b border-stone-100 p-4 sm:p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex gap-2 overflow-x-auto pb-1">
@@ -163,8 +163,8 @@ export default function ActivityManagement({ onCreate, onEdit }) {
       </section>
 
       {preview && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-950/55 p-4 backdrop-blur-sm" onMouseDown={(event) => event.target === event.currentTarget && setPreview(null)}>
-          <div className="mx-auto my-4 max-w-3xl sm:my-10">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-950/55 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-sm sm:p-4" onMouseDown={(event) => event.target === event.currentTarget && setPreview(null)}>
+          <div className="mx-auto my-2 max-w-3xl sm:my-10">
             <div className="mb-3 flex justify-end"><button type="button" onClick={() => setPreview(null)} className="rounded-full bg-white px-4 py-2 text-sm font-bold text-stone-700 shadow">关闭预览</button></div>
             <ActivityPreview activity={preview} />
           </div>
@@ -176,7 +176,7 @@ export default function ActivityManagement({ onCreate, onEdit }) {
 
 function SummaryCard({ label, value, hint, tone }) {
   const tones = { indigo: 'bg-indigo-600 text-white', stone: 'bg-white text-stone-900', amber: 'bg-amber-50 text-amber-950', emerald: 'bg-emerald-50 text-emerald-950' }
-  return <div className={`rounded-2xl border border-stone-200 p-5 shadow-sm ${tones[tone]}`}><div className="text-xs font-semibold opacity-70">{label}</div><div className="mt-2 text-3xl font-bold">{value}</div><div className="mt-1 text-xs opacity-60">{hint}</div></div>
+  return <div className={`rounded-2xl border border-stone-200 p-3.5 shadow-sm sm:p-5 ${tones[tone]}`}><div className="text-[11px] font-semibold opacity-70 sm:text-xs">{label}</div><div className="mt-1.5 text-2xl font-bold sm:mt-2 sm:text-3xl">{value}</div><div className="mt-1 truncate text-[10px] opacity-60 sm:text-xs">{hint}</div></div>
 }
 
 function ActivityRow({ activity, busy, onPreview, onEdit, onDuplicate, onDelete, onPublish }) {
@@ -195,7 +195,7 @@ function ActivityRow({ activity, busy, onPreview, onEdit, onDuplicate, onDelete,
 
 function ActivityMobileCard({ activity, busy, onPreview, onEdit, onDuplicate, onDelete, onPublish }) {
   const editable = ['DRAFT', 'REJECTED'].includes(activity.status)
-  return <div className="p-4"><div className="flex items-start justify-between gap-3"><button type="button" onClick={() => onPreview(activity)} className="text-left"><div className="font-bold text-stone-900">{activity.title || '未命名活动'}</div><div className="mt-1 text-xs text-stone-400">{CATEGORY_LABELS[activity.category] || '未分类'} · {formatDate(activity.startTime)}</div></button><StatusBadge activity={activity} /></div><div className="mt-3 rounded-xl bg-stone-50 px-3 py-2 text-xs text-stone-500">{activity.location || '地点待定'} · {activity.creationMode === 'MANUAL' ? '手动创建' : 'AI 创建'}</div><div className="mt-3 flex flex-wrap justify-end gap-1"><Action onClick={() => onPreview(activity)}>预览</Action>{editable && <Action onClick={() => onEdit(activity)}>编辑</Action>}{activity.status === 'APPROVED' && <Action primary disabled={busy} onClick={() => onPublish(activity)}>发布</Action>}<Action disabled={busy} onClick={() => onDuplicate(activity)}>复制</Action>{editable && <Action danger disabled={busy} onClick={() => onDelete(activity)}>删除</Action>}</div></div>
+  return <div className="p-4"><div className="flex items-start justify-between gap-3"><button type="button" onClick={() => onPreview(activity)} className="min-w-0 text-left"><div className="line-clamp-2 font-bold text-stone-900">{activity.title || '未命名活动'}</div><div className="mt-1 text-xs text-stone-400">{CATEGORY_LABELS[activity.category] || '未分类'} · {formatDate(activity.startTime)}</div></button><StatusBadge activity={activity} /></div><div className="mt-3 rounded-xl bg-stone-50 px-3 py-2 text-xs text-stone-500">{activity.location || '地点待定'} · {activity.creationMode === 'MANUAL' ? '手动创建' : 'AI 创建'}</div><div className="mt-3 grid grid-cols-3 gap-1.5"><Action onClick={() => onPreview(activity)}>预览</Action>{editable && <Action onClick={() => onEdit(activity)}>编辑</Action>}{activity.status === 'APPROVED' && <Action primary disabled={busy} onClick={() => onPublish(activity)}>发布</Action>}<Action disabled={busy} onClick={() => onDuplicate(activity)}>复制</Action>{editable && <Action danger disabled={busy} onClick={() => onDelete(activity)}>删除</Action>}</div></div>
 }
 
 function StatusBadge({ activity }) {
@@ -209,7 +209,7 @@ function StatusBadge({ activity }) {
 
 function Action({ children, onClick, disabled, danger = false, primary = false }) {
   const tone = primary ? 'bg-indigo-600 text-white hover:bg-indigo-700' : danger ? 'text-red-600 hover:bg-red-50' : 'text-stone-500 hover:bg-stone-100 hover:text-indigo-600'
-  return <button type="button" disabled={disabled} onClick={onClick} className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition disabled:opacity-40 ${tone}`}>{children}</button>
+  return <button type="button" disabled={disabled} onClick={onClick} className={`min-h-9 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition disabled:opacity-40 ${tone}`}>{children}</button>
 }
 
 function Th({ children, align }) {

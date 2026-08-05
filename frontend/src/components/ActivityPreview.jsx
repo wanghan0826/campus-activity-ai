@@ -29,8 +29,8 @@ export default function ActivityPreview({ activity = {}, compact = false }) {
   const materials = activity.materials || []
 
   return (
-    <div className={`overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-sm ${compact ? 'max-w-2xl' : ''}`}>
-      <div className="relative min-h-48 overflow-hidden bg-gradient-to-br from-indigo-950 via-violet-900 to-emerald-800 px-6 py-7 text-white sm:px-8">
+    <div className={`overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm sm:rounded-3xl ${compact ? 'max-w-2xl' : ''}`}>
+      <div className="relative min-h-44 overflow-hidden bg-gradient-to-br from-indigo-950 via-violet-900 to-emerald-800 px-5 py-6 text-white sm:min-h-48 sm:px-8 sm:py-7">
         {activity.coverImage ? (
           <img src={activity.coverImage} alt="活动封面" className="absolute inset-0 h-full w-full object-cover opacity-55" />
         ) : (
@@ -66,8 +66,8 @@ export default function ActivityPreview({ activity = {}, compact = false }) {
             <SectionTitle>活动流程</SectionTitle>
             <div className="space-y-3">
               {schedule.map((item, index) => (
-                <div key={`${item.time}-${index}`} className="flex gap-3 text-sm">
-                  <span className="min-w-24 font-semibold text-emerald-700">{item.time || `环节 ${index + 1}`}</span>
+                <div key={`${item.time}-${index}`} className="flex flex-col gap-1 text-sm sm:flex-row sm:gap-3">
+                  <span className="font-semibold text-emerald-700 sm:min-w-24">{item.time || `环节 ${index + 1}`}</span>
                   <span className="text-stone-600">{item.content || '待补充'}</span>
                 </div>
               ))}

@@ -239,9 +239,9 @@ export default function ActivityCard({
   }
 
   return (
-    <article className="overflow-hidden rounded-[28px] border border-stone-200 bg-white shadow-[0_18px_60px_rgba(28,25,23,0.08)]">
-      <div className="border-b border-stone-100 bg-gradient-to-r from-indigo-50 via-white to-emerald-50 px-5 py-5 sm:px-7">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+    <article className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_18px_60px_rgba(28,25,23,0.08)] sm:rounded-[28px]">
+      <div className="border-b border-stone-100 bg-gradient-to-r from-indigo-50 via-white to-emerald-50 px-4 py-5 sm:px-7">
+        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-bold text-indigo-700">
@@ -252,7 +252,7 @@ export default function ActivityCard({
             <h2 className="mt-3 text-xl font-bold text-stone-900 sm:text-2xl">完善活动方案</h2>
             <p className="mt-1 text-sm text-stone-500">编辑完成后可先预览学生视角，再保存或提交审批</p>
           </div>
-          <div className="inline-flex rounded-xl bg-stone-100 p-1">
+          <div className="grid w-full grid-cols-2 rounded-xl bg-stone-100 p-1 sm:inline-flex sm:w-auto">
             <ViewButton active={view === 'edit'} onClick={() => setView('edit')}>编辑方案</ViewButton>
             <ViewButton active={view === 'preview'} onClick={() => setView('preview')}>学生视角</ViewButton>
           </div>
@@ -267,7 +267,7 @@ export default function ActivityCard({
           <ActivityPreview activity={activity} />
         </div>
       ) : (
-        <div className="space-y-8 px-5 py-6 sm:px-7">
+        <div className="space-y-7 px-4 py-5 sm:space-y-8 sm:px-7 sm:py-6">
           {FIELD_GROUPS.map((group) => (
             <section key={group.title}>
               <div className="mb-4">
@@ -307,7 +307,7 @@ export default function ActivityCard({
                 <div key={index} className="grid gap-2 rounded-2xl bg-stone-50 p-3 sm:grid-cols-[140px_1fr_auto]">
                   <input value={item.time || ''} onChange={(event) => updateSchedule(index, 'time', event.target.value)} placeholder="例如 14:00-14:20" className="form-input" />
                   <input value={item.content || ''} onChange={(event) => updateSchedule(index, 'content', event.target.value)} placeholder="环节内容" className="form-input" />
-                  <button type="button" onClick={() => updateField('schedule', activity.schedule.filter((_, itemIndex) => itemIndex !== index))} className="rounded-xl px-3 text-xs text-stone-400 hover:bg-red-50 hover:text-red-600">删除</button>
+                  <button type="button" onClick={() => updateField('schedule', activity.schedule.filter((_, itemIndex) => itemIndex !== index))} className="min-h-10 rounded-xl px-3 text-xs text-stone-400 hover:bg-red-50 hover:text-red-600">删除</button>
                 </div>
               ))}
               {(activity.schedule || []).length === 0 && <EmptyAction onClick={() => updateField('schedule', [{ time: '', content: '' }])}>添加活动流程</EmptyAction>}
@@ -320,13 +320,13 @@ export default function ActivityCard({
             </SectionHeader>
             <div className="space-y-2">
               {(activity.materials || []).map((material, index) => (
-                <div key={index} className="flex gap-2">
+                <div key={index} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
                   <input value={material} onChange={(event) => {
                     const next = [...activity.materials]
                     next[index] = event.target.value
                     updateField('materials', next)
                   }} placeholder={`物料 ${index + 1}`} className="form-input flex-1" />
-                  <button type="button" onClick={() => updateField('materials', activity.materials.filter((_, itemIndex) => itemIndex !== index))} className="rounded-xl px-3 text-xs text-stone-400 hover:bg-red-50 hover:text-red-600">删除</button>
+                  <button type="button" onClick={() => updateField('materials', activity.materials.filter((_, itemIndex) => itemIndex !== index))} className="min-h-10 rounded-xl px-3 text-xs text-stone-400 hover:bg-red-50 hover:text-red-600">删除</button>
                 </div>
               ))}
               {(activity.materials || []).length === 0 && <EmptyAction onClick={() => updateField('materials', [''])}>添加第一项物料</EmptyAction>}
@@ -341,7 +341,7 @@ export default function ActivityCard({
         </div>
       )}
 
-      <div className="border-t border-stone-100 bg-stone-50 px-5 py-5 sm:px-7">
+      <div className="border-t border-stone-100 bg-stone-50 px-4 py-5 sm:px-7">
         {error && <div role="alert" className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
         {success && <div role="status" className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">✓ {success}</div>}
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
@@ -420,7 +420,7 @@ function Field({ field, value, missing, onChange }) {
 }
 
 function ViewButton({ active, onClick, children }) {
-  return <button type="button" onClick={onClick} className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${active ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500 hover:text-stone-800'}`}>{children}</button>
+  return <button type="button" onClick={onClick} className={`min-h-10 rounded-lg px-3 py-2 text-xs font-semibold transition ${active ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500 hover:text-stone-800'}`}>{children}</button>
 }
 
 function CoverImageEditor({ imageUrl, generating, onGenerate, onImageUrlChange }) {
@@ -437,11 +437,11 @@ function CoverImageEditor({ imageUrl, generating, onGenerate, onImageUrlChange }
         <div className="p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div><h4 className="text-sm font-bold text-stone-900">活动封面</h4><p className="mt-1 text-xs leading-5 text-stone-500">根据上方画面描述生成，也可以使用已有图片。</p></div>
-            <button type="button" onClick={onGenerate} disabled={generating} className="rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-wait disabled:opacity-60">
+            <button type="button" onClick={onGenerate} disabled={generating} className="w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-wait disabled:opacity-60 sm:w-auto">
               {generating ? '正在生成封面…' : imageUrl ? '重新生成' : 'AI 生成封面'}
             </button>
           </div>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
             <input value={imageUrl || ''} onChange={(event) => onImageUrlChange(event.target.value)} placeholder="或粘贴已有图片地址" className="form-input flex-1 bg-white text-xs" />
             {imageUrl && <button type="button" onClick={() => onImageUrlChange('')} className="rounded-xl px-3 text-xs font-semibold text-stone-400 hover:bg-red-50 hover:text-red-600">移除</button>}
           </div>
@@ -453,7 +453,7 @@ function CoverImageEditor({ imageUrl, generating, onGenerate, onImageUrlChange }
 
 function SectionHeader({ title, description, children }) {
   return (
-    <div className="mb-4 flex items-start justify-between gap-4">
+    <div className="mb-4 flex flex-col items-start justify-between gap-3 sm:flex-row sm:gap-4">
       <div><h3 className="text-sm font-bold text-stone-900">{title}</h3><p className="mt-1 text-xs text-stone-400">{description}</p></div>
       {children}
     </div>

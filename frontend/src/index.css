@@ -17,12 +17,14 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
+  overflow-x: hidden;
 }
 
 button,
@@ -72,4 +74,17 @@ select {
 
 .small-action:hover {
   background: #e0e7ff;
+}
+
+@media (max-width: 639px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  .form-input {
+    min-height: 2.75rem;
+    font-size: 1rem;
+  }
 }

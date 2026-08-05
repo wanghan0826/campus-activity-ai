@@ -55,8 +55,8 @@ export default function CreateActivity({ editingActivity, onActivityChanged, onC
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-7 sm:px-6 sm:py-10">
-      <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+    <div className="mx-auto max-w-6xl px-3 py-5 sm:px-6 sm:py-10">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-4 sm:mb-7">
         <div>
           <div className="mb-2 flex items-center gap-2 text-xs font-bold text-indigo-600">
             <span className="grid h-6 w-6 place-items-center rounded-lg bg-indigo-600 text-white">1</span>
@@ -75,7 +75,7 @@ export default function CreateActivity({ editingActivity, onActivityChanged, onC
       </div>
 
       {!editingActivity && (
-        <div className="mb-7 grid gap-3 sm:grid-cols-2">
+        <div className="mb-5 grid gap-3 sm:mb-7 sm:grid-cols-2">
           <ModeCard active={mode === 'AI'} title="AI 快速创建" badge="推荐" description="输入一句话或粘贴活动文档，AI 自动整理方案。" onClick={() => switchMode('AI')} icon="✦" />
           <ModeCard active={mode === 'MANUAL'} title="手动创建" description="使用传统完整表单，从空白方案开始填写。" onClick={() => switchMode('MANUAL')} icon="✎" />
         </div>
@@ -86,7 +86,7 @@ export default function CreateActivity({ editingActivity, onActivityChanged, onC
       ) : mode === 'MANUAL' ? (
         <ActivityCard parsedResult={EMPTY_MANUAL_ACTIVITY} creationMode="MANUAL" onSaved={onActivityChanged} />
       ) : (
-        <div className="overflow-hidden rounded-[28px] border border-stone-200 bg-white shadow-sm">
+        <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm sm:rounded-[28px]">
           <div className="space-y-7 px-4 py-6 sm:px-7 sm:py-8">
             <div className="flex items-start gap-3">
               <BotAvatar />
@@ -117,8 +117,8 @@ export default function CreateActivity({ editingActivity, onActivityChanged, onC
                       </div>
                     </div>
                   )}
-                  <div className="flex items-start gap-3">
-                    <BotAvatar />
+                  <div className="block sm:flex sm:items-start sm:gap-3">
+                    <div className="hidden sm:block"><BotAvatar /></div>
                     <div className="min-w-0 flex-1">
                       <p className="mb-2 text-xs text-stone-500">AI 已生成完整方案卡片，请人工核对后提交。</p>
                       <ActivityCard

@@ -49,9 +49,9 @@ export default function ChatBox({
   }
 
   return (
-    <div className="border-t border-stone-200/80 bg-white/90 px-4 py-4 backdrop-blur-xl sm:px-6">
+    <div className="border-t border-stone-200/80 bg-white/90 px-3 py-3 backdrop-blur-xl sm:px-6 sm:py-4">
       <div className="mx-auto max-w-4xl">
-        <div className="rounded-[22px] border border-stone-200 bg-stone-50 p-2 shadow-sm transition focus-within:border-emerald-500/50 focus-within:bg-white focus-within:shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
+        <div className="rounded-2xl border border-stone-200 bg-stone-50 p-2 shadow-sm transition focus-within:border-emerald-500/50 focus-within:bg-white focus-within:shadow-[0_8px_30px_rgba(0,0,0,0.06)] sm:rounded-[22px]">
           <label htmlFor="activity-document" className="sr-only">
             活动文档
           </label>
@@ -63,7 +63,7 @@ export default function ChatBox({
             placeholder={placeholder}
             rows={4}
             disabled={loading || disabled}
-            className="max-h-60 min-h-24 w-full resize-y bg-transparent px-3 py-2 text-[15px] leading-7 text-stone-800 outline-none placeholder:text-stone-400 disabled:cursor-not-allowed"
+              className="max-h-60 min-h-24 w-full resize-y bg-transparent px-3 py-2 text-base leading-7 text-stone-800 outline-none placeholder:text-stone-400 disabled:cursor-not-allowed sm:text-[15px]"
           />
           <div className="flex items-center justify-between gap-3 px-2 pb-1">
             <span className="hidden text-xs text-stone-400 sm:inline">Ctrl / ⌘ + Enter 发送</span>

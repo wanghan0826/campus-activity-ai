@@ -105,19 +105,19 @@ export default function AiSettingsDialog({ onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-stone-950/55 p-4 backdrop-blur-sm" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <section role="dialog" aria-modal="true" aria-labelledby="ai-settings-title" className="my-auto w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl sm:p-7">
+    <div className="fixed inset-0 z-50 flex items-end overflow-y-auto bg-stone-950/55 p-0 backdrop-blur-sm sm:grid sm:place-items-center sm:p-4" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <section role="dialog" aria-modal="true" aria-labelledby="ai-settings-title" className="max-h-[calc(100dvh-1rem)] w-full max-w-2xl overflow-y-auto rounded-t-3xl bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl sm:my-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl sm:p-7">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="grid h-11 w-11 place-items-center rounded-2xl bg-indigo-100 font-bold text-indigo-700">AI</div>
-            <h2 id="ai-settings-title" className="mt-4 text-xl font-bold text-stone-900">AI 设置</h2>
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-indigo-100 font-bold text-indigo-700 sm:h-11 sm:w-11 sm:rounded-2xl">AI</div>
+            <h2 id="ai-settings-title" className="mt-3 text-xl font-bold text-stone-900 sm:mt-4">AI 设置</h2>
             <p className="mt-1 text-sm leading-6 text-stone-500">分别连接活动方案模型和封面生图模型。</p>
           </div>
           <button type="button" onClick={onClose} className="rounded-full px-3 py-2 text-sm font-bold text-stone-400 hover:bg-stone-100 hover:text-stone-700">关闭</button>
         </div>
 
         {loading ? <p className="mt-6 text-sm text-stone-400">正在读取配置…</p> : (
-          <div className="mt-6 space-y-4">
+          <div className="mt-5 space-y-4 sm:mt-6">
             <SettingsSection
               title="活动方案"
               description="用于理解活动需求并整理方案"
@@ -129,9 +129,9 @@ export default function AiSettingsDialog({ onClose }) {
                 <span className="mb-1.5 block text-xs font-semibold text-stone-600">API Key</span>
                 <input type="password" autoComplete="off" value={chatApiKey} onChange={(event) => { setChatApiKey(event.target.value); resetFeedback() }} placeholder="输入 sk-..." className="form-input" />
               </label>
-              <div className="mt-3 flex flex-wrap justify-end gap-2">
-                {chatSettings?.configured && <button type="button" disabled={Boolean(saving)} onClick={clearChat} className="mr-auto rounded-xl px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-40">清除 Key</button>}
-                <button type="button" disabled={Boolean(saving) || !chatApiKey.trim()} onClick={saveChat} className="rounded-xl bg-stone-900 px-4 py-2 text-xs font-bold text-white hover:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-40">{saving === 'chat' ? '正在保存…' : '保存活动方案配置'}</button>
+              <div className="mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+                {chatSettings?.configured && <button type="button" disabled={Boolean(saving)} onClick={clearChat} className="min-h-10 rounded-xl px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-40 sm:mr-auto">清除 Key</button>}
+                <button type="button" disabled={Boolean(saving) || !chatApiKey.trim()} onClick={saveChat} className="min-h-10 rounded-xl bg-stone-900 px-4 py-2 text-xs font-bold text-white hover:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-40">{saving === 'chat' ? '正在保存…' : '保存活动方案配置'}</button>
               </div>
             </SettingsSection>
 
@@ -159,9 +159,9 @@ export default function AiSettingsDialog({ onClose }) {
                   <input type="password" autoComplete="off" value={imageApiKey} onChange={(event) => { setImageApiKey(event.target.value); resetFeedback() }} placeholder="粘贴方舟 API Key" className="form-input" />
                 </label>
               </div>
-              <div className="mt-3 flex flex-wrap justify-end gap-2">
-                {imageSettings?.configured && <button type="button" disabled={Boolean(saving)} onClick={clearImage} className="mr-auto rounded-xl px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-40">清除 Key</button>}
-                <button type="button" disabled={Boolean(saving) || !imageApiKey.trim() || !imageApiUrl.trim() || !imageModel.trim()} onClick={saveImage} className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-40">{saving === 'image' ? '正在保存…' : '保存生图配置'}</button>
+              <div className="mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+                {imageSettings?.configured && <button type="button" disabled={Boolean(saving)} onClick={clearImage} className="min-h-10 rounded-xl px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-40 sm:mr-auto">清除 Key</button>}
+                <button type="button" disabled={Boolean(saving) || !imageApiKey.trim() || !imageApiUrl.trim() || !imageModel.trim()} onClick={saveImage} className="min-h-10 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-40">{saving === 'image' ? '正在保存…' : '保存生图配置'}</button>
               </div>
             </SettingsSection>
           </div>
@@ -179,10 +179,10 @@ export default function AiSettingsDialog({ onClose }) {
 
 function SettingsSection({ title, description, configured, maskedKey, model, children }) {
   return (
-    <section className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+    <section className="rounded-2xl border border-stone-200 bg-stone-50 p-3.5 sm:p-4">
+      <div className="mb-4 flex flex-col items-start justify-between gap-2 sm:flex-row sm:gap-3">
         <div><h3 className="text-sm font-bold text-stone-900">{title}</h3><p className="mt-1 text-xs text-stone-500">{description}</p></div>
-        <div className="text-right"><div className={`text-xs font-bold ${configured ? 'text-emerald-700' : 'text-amber-700'}`}>{configured ? `已连接 ${maskedKey}` : '未连接'}</div><div className="mt-1 text-[11px] text-stone-400">{model}</div></div>
+        <div className="max-w-full text-left sm:text-right"><div className={`text-xs font-bold ${configured ? 'text-emerald-700' : 'text-amber-700'}`}>{configured ? `已连接 ${maskedKey}` : '未连接'}</div><div className="mt-1 break-all text-[11px] text-stone-400">{model}</div></div>
       </div>
       {children}
     </section>
