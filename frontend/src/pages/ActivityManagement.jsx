@@ -25,7 +25,7 @@ const FILTERS = [
 
 const CATEGORY_LABELS = { ART: '艺术类', SPORTS: '艺体类', PRACTICE: '实践类', LIFE: '生活类', FEATURE: '特色类' }
 
-export default function ActivityManagement({ onCreate, onEdit }) {
+export default function ActivityManagement({ onCreate, onEdit, onCheckIn }) {
   const [activities, setActivities] = useState([])
   const [stats, setStats] = useState({})
   const [status, setStatus] = useState('ALL')
@@ -152,11 +152,11 @@ export default function ActivityManagement({ onCreate, onEdit }) {
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[920px] border-collapse text-left">
                 <thead><tr className="bg-stone-50 text-[11px] uppercase tracking-wider text-stone-400"><Th>活动信息</Th><Th>时间与地点</Th><Th>创建方式</Th><Th>状态</Th><Th>更新时间</Th><Th align="right">操作</Th></tr></thead>
-                <tbody>{activities.map((activity) => <ActivityRow key={activity.id} activity={activity} busy={actionId === activity.id} onPreview={setPreview} onEdit={onEdit} onDuplicate={handleDuplicate} onDelete={handleDelete} onPublish={handlePublish} />)}</tbody>
+                <tbody>{activities.map((activity) => <ActivityRow key={activity.id} activity={activity} busy={actionId === activity.id} onPreview={setPreview} onEdit={onEdit} onCheckIn={onCheckIn} onDuplicate={handleDuplicate} onDelete={handleDelete} onPublish={handlePublish} />)}</tbody>
               </table>
             </div>
             <div className="divide-y divide-stone-100 md:hidden">
-              {activities.map((activity) => <ActivityMobileCard key={activity.id} activity={activity} busy={actionId === activity.id} onPreview={setPreview} onEdit={onEdit} onDuplicate={handleDuplicate} onDelete={handleDelete} onPublish={handlePublish} />)}
+              {activities.map((activity) => <ActivityMobileCard key={activity.id} activity={activity} busy={actionId === activity.id} onPreview={setPreview} onEdit={onEdit} onCheckIn={onCheckIn} onDuplicate={handleDuplicate} onDelete={handleDelete} onPublish={handlePublish} />)}
             </div>
           </>
         )}
@@ -179,7 +179,7 @@ function SummaryCard({ label, value, hint, tone }) {
   return <div className={`rounded-2xl border border-stone-200 p-3.5 shadow-sm sm:p-5 ${tones[tone]}`}><div className="text-[11px] font-semibold opacity-70 sm:text-xs">{label}</div><div className="mt-1.5 text-2xl font-bold sm:mt-2 sm:text-3xl">{value}</div><div className="mt-1 truncate text-[10px] opacity-60 sm:text-xs">{hint}</div></div>
 }
 
-function ActivityRow({ activity, busy, onPreview, onEdit, onDuplicate, onDelete, onPublish }) {
+function ActivityRow({ activity, busy, onPreview, onEdit, onCheckIn, onDuplicate, onDelete, onPublish }) {
   const editable = ['DRAFT', 'REJECTED'].includes(activity.status)
   return (
     <tr className="border-t border-stone-100 text-sm hover:bg-stone-50/70">
@@ -188,14 +188,14 @@ function ActivityRow({ activity, busy, onPreview, onEdit, onDuplicate, onDelete,
       <td className="px-5 py-4 text-xs text-stone-500">{activity.creationMode === 'MANUAL' ? '手动创建' : 'AI 创建'}</td>
       <td className="px-5 py-4"><StatusBadge activity={activity} /></td>
       <td className="px-5 py-4 text-xs text-stone-400">{formatDate(activity.updatedAt)}</td>
-      <td className="px-5 py-4"><div className="flex justify-end gap-1"><Action onClick={() => onPreview(activity)}>预览</Action>{editable && <Action onClick={() => onEdit(activity)}>编辑</Action>}{activity.status === 'APPROVED' && <Action primary disabled={busy} onClick={() => onPublish(activity)}>发布</Action>}<Action disabled={busy} onClick={() => onDuplicate(activity)}>复制</Action>{editable && <Action danger disabled={busy} onClick={() => onDelete(activity)}>删除</Action>}</div></td>
+      <td className="px-5 py-4"><div className="flex justify-end gap-1"><Action onClick={() => onPreview(activity)}>预览</Action>{['PUBLISHED', 'OFFLINE'].includes(activity.status) && <Action primary onClick={() => onCheckIn(activity)}>签到表</Action>}{editable && <Action onClick={() => onEdit(activity)}>编辑</Action>}{activity.status === 'APPROVED' && <Action primary disabled={busy} onClick={() => onPublish(activity)}>发布</Action>}<Action disabled={busy} onClick={() => onDuplicate(activity)}>复制</Action>{editable && <Action danger disabled={busy} onClick={() => onDelete(activity)}>删除</Action>}</div></td>
     </tr>
   )
 }
 
-function ActivityMobileCard({ activity, busy, onPreview, onEdit, onDuplicate, onDelete, onPublish }) {
+function ActivityMobileCard({ activity, busy, onPreview, onEdit, onCheckIn, onDuplicate, onDelete, onPublish }) {
   const editable = ['DRAFT', 'REJECTED'].includes(activity.status)
-  return <div className="p-4"><div className="flex items-start justify-between gap-3"><button type="button" onClick={() => onPreview(activity)} className="min-w-0 text-left"><div className="line-clamp-2 font-bold text-stone-900">{activity.title || '未命名活动'}</div><div className="mt-1 text-xs text-stone-400">{CATEGORY_LABELS[activity.category] || '未分类'} · {formatDate(activity.startTime)}</div></button><StatusBadge activity={activity} /></div><div className="mt-3 rounded-xl bg-stone-50 px-3 py-2 text-xs text-stone-500">{activity.location || '地点待定'} · {activity.creationMode === 'MANUAL' ? '手动创建' : 'AI 创建'}</div><div className="mt-3 grid grid-cols-3 gap-1.5"><Action onClick={() => onPreview(activity)}>预览</Action>{editable && <Action onClick={() => onEdit(activity)}>编辑</Action>}{activity.status === 'APPROVED' && <Action primary disabled={busy} onClick={() => onPublish(activity)}>发布</Action>}<Action disabled={busy} onClick={() => onDuplicate(activity)}>复制</Action>{editable && <Action danger disabled={busy} onClick={() => onDelete(activity)}>删除</Action>}</div></div>
+  return <div className="p-4"><div className="flex items-start justify-between gap-3"><button type="button" onClick={() => onPreview(activity)} className="min-w-0 text-left"><div className="line-clamp-2 font-bold text-stone-900">{activity.title || '未命名活动'}</div><div className="mt-1 text-xs text-stone-400">{CATEGORY_LABELS[activity.category] || '未分类'} · {formatDate(activity.startTime)}</div></button><StatusBadge activity={activity} /></div><div className="mt-3 rounded-xl bg-stone-50 px-3 py-2 text-xs text-stone-500">{activity.location || '地点待定'} · {activity.creationMode === 'MANUAL' ? '手动创建' : 'AI 创建'}</div><div className="mt-3 grid grid-cols-3 gap-1.5"><Action onClick={() => onPreview(activity)}>预览</Action>{['PUBLISHED', 'OFFLINE'].includes(activity.status) && <Action primary onClick={() => onCheckIn(activity)}>签到表</Action>}{editable && <Action onClick={() => onEdit(activity)}>编辑</Action>}{activity.status === 'APPROVED' && <Action primary disabled={busy} onClick={() => onPublish(activity)}>发布</Action>}<Action disabled={busy} onClick={() => onDuplicate(activity)}>复制</Action>{editable && <Action danger disabled={busy} onClick={() => onDelete(activity)}>删除</Action>}</div></div>
 }
 
 function StatusBadge({ activity }) {

@@ -32,6 +32,7 @@ public class StudentActivityView {
     private BigDecimal secondClassCredits;
     private BigDecimal volunteerHours;
     private String checkInMode;
+    private boolean checkInOpen;
     private String participationRequirements;
     private List<ActivityScheduleItem> schedule;
     private List<String> materials;
@@ -40,4 +41,8 @@ public class StudentActivityView {
     private LocalDateTime registeredAt;
     private boolean canRegister;
     private String registrationNotice;
+    private boolean checkedIn;
+    private LocalDateTime checkedInAt;
+    private boolean canCheckIn;
+    private String checkInNotice;
 }

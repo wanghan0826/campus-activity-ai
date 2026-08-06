@@ -7,6 +7,7 @@ import {
   getStudentActivity,
   registerForActivity,
   resolveApiAssetUrl,
+  studentCheckIn,
 } from '../api/activity.js'
 import ActivityPreview from '../components/ActivityPreview.jsx'
 
@@ -32,6 +33,8 @@ export default function StudentActivities({ section = 'activities', onNavigate }
   const [detail, setDetail] = useState(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [checkInTarget, setCheckInTarget] = useState(null)
+  const [checkInError, setCheckInError] = useState('')
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -57,6 +60,7 @@ export default function StudentActivities({ section = 'activities', onNavigate }
 
   useEffect(() => {
     setDetail(null)
+    setCheckInTarget(null)
     setError('')
     setSuccess('')
   }, [section])
@@ -109,6 +113,23 @@ export default function StudentActivities({ section = 'activities', onNavigate }
       setSuccess('报名已取消，如名额仍开放可以重新报名')
     } catch (requestError) {
       setError(getApiErrorMessage(requestError, '取消报名失败'))
+    } finally {
+      setActionId(null)
+    }
+  }
+
+  const checkIn = async (activity, code) => {
+    setActionId(activity.id)
+    setCheckInError('')
+    setError('')
+    setSuccess('')
+    try {
+      const updated = await studentCheckIn(activity.id, code)
+      updateActivity(updated)
+      setCheckInTarget(null)
+      setSuccess('签到成功，祝你活动愉快')
+    } catch (requestError) {
+      setCheckInError(getApiErrorMessage(requestError, '签到失败'))
     } finally {
       setActionId(null)
     }
@@ -170,17 +191,18 @@ export default function StudentActivities({ section = 'activities', onNavigate }
       ) : (
         <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {displayedActivities.map((activity) => (
-            <StudentActivityCard key={activity.id} activity={activity} busy={actionId === activity.id} onOpen={() => openDetail(activity)} onRegister={() => register(activity)} onCancel={() => cancel(activity)} />
+            <StudentActivityCard key={activity.id} activity={activity} busy={actionId === activity.id} onOpen={() => openDetail(activity)} onRegister={() => register(activity)} onCancel={() => cancel(activity)} onCheckIn={() => { setCheckInError(''); setCheckInTarget(activity) }} />
           ))}
         </div>
       )}
 
-      {detail && <ActivityDetailDialog activity={detail} busy={actionId === detail.id} onClose={() => setDetail(null)} onRegister={() => register(detail)} onCancel={() => cancel(detail)} />}
+      {detail && <ActivityDetailDialog activity={detail} busy={actionId === detail.id} onClose={() => setDetail(null)} onRegister={() => register(detail)} onCancel={() => cancel(detail)} onCheckIn={() => { setCheckInError(''); setCheckInTarget(detail) }} />}
+      {checkInTarget && <CheckInDialog activity={checkInTarget} busy={actionId === checkInTarget.id} error={checkInError} onClose={() => setCheckInTarget(null)} onConfirm={(code) => checkIn(checkInTarget, code)} />}
     </div>
   )
 }
 
-function StudentActivityCard({ activity, busy, onOpen, onRegister, onCancel }) {
+function StudentActivityCard({ activity, busy, onOpen, onRegister, onCancel, onCheckIn }) {
   return (
     <article className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
       <button type="button" onClick={onOpen} className="block w-full text-left">
@@ -188,7 +210,7 @@ function StudentActivityCard({ activity, busy, onOpen, onRegister, onCancel }) {
           {activity.coverImage ? <img src={resolveApiAssetUrl(activity.coverImage)} alt="" className="h-full w-full object-cover opacity-70" /> : <div className="absolute inset-0 opacity-40 [background-image:radial-gradient(circle_at_20%_20%,white_0,transparent_25%),radial-gradient(circle_at_80%_10%,#fde68a_0,transparent_22%)]" />}
           <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-3">
             <span className="rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold text-indigo-700 shadow-sm">{CATEGORY_LABELS[activity.category] || '校园活动'}</span>
-            {activity.registrationStatus && <RegistrationBadge status={activity.registrationStatus} />}
+            <div className="flex flex-col items-end gap-1">{activity.registrationStatus && <RegistrationBadge status={activity.registrationStatus} />}{activity.checkedIn && <span className="rounded-full bg-indigo-600 px-2.5 py-1 text-[11px] font-bold text-white">已签到</span>}</div>
           </div>
         </div>
         <div className="p-4">
@@ -199,13 +221,13 @@ function StudentActivityCard({ activity, busy, onOpen, onRegister, onCancel }) {
         </div>
       </button>
       <div className="border-t border-stone-100 p-3">
-        <RegistrationAction activity={activity} busy={busy} onRegister={onRegister} onCancel={onCancel} />
+        <RegistrationAction activity={activity} busy={busy} onRegister={onRegister} onCancel={onCancel} onCheckIn={onCheckIn} />
       </div>
     </article>
   )
 }
 
-function ActivityDetailDialog({ activity, busy, onClose, onRegister, onCancel }) {
+function ActivityDetailDialog({ activity, busy, onClose, onRegister, onCancel, onCheckIn }) {
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-950/60 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-sm sm:p-4" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <div className="mx-auto my-2 max-w-3xl sm:my-8">
@@ -213,22 +235,45 @@ function ActivityDetailDialog({ activity, busy, onClose, onRegister, onCancel })
         <ActivityPreview activity={activity} />
         <div className="sticky bottom-2 mt-3 rounded-2xl border border-stone-200 bg-white/95 p-3 shadow-xl backdrop-blur sm:p-4">
           <div className="mb-3 flex items-center justify-between gap-3 text-xs text-stone-500"><span>{activity.registrationNotice}</span><span className="shrink-0">{capacityText(activity)}</span></div>
-          <RegistrationAction activity={activity} busy={busy} onRegister={onRegister} onCancel={onCancel} />
+          <RegistrationAction activity={activity} busy={busy} onRegister={onRegister} onCancel={onCancel} onCheckIn={onCheckIn} />
         </div>
       </div>
     </div>
   )
 }
 
-function RegistrationAction({ activity, busy, onRegister, onCancel }) {
+function RegistrationAction({ activity, busy, onRegister, onCancel, onCheckIn }) {
   const active = ['PENDING', 'APPROVED'].includes(activity.registrationStatus)
+  if (activity.checkedIn) {
+    return <div className="rounded-xl bg-emerald-50 px-4 py-3 text-center text-sm font-bold text-emerald-700">✓ 已完成签到{activity.checkedInAt ? ` · ${formatDate(activity.checkedInAt)}` : ''}</div>
+  }
   if (active) {
-    return <button type="button" disabled={busy} onClick={onCancel} className="min-h-11 w-full rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 disabled:opacity-50">{busy ? '正在处理…' : '取消报名'}</button>
+    return <div><div className="mb-2 text-center text-xs text-stone-400">{activity.checkInNotice}</div><div className={`grid gap-2 ${activity.canCheckIn ? 'grid-cols-2' : 'grid-cols-1'}`}>{activity.canCheckIn && <button type="button" disabled={busy} onClick={onCheckIn} className="min-h-11 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50">现场签到</button>}<button type="button" disabled={busy} onClick={onCancel} className="min-h-11 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 disabled:opacity-50">{busy ? '正在处理…' : '取消报名'}</button></div></div>
   }
   if (activity.canRegister) {
     return <button type="button" disabled={busy} onClick={onRegister} className="min-h-11 w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50">{busy ? '正在报名…' : activity.registrationStatus === 'CANCELLED' ? '重新报名' : '立即报名'}</button>
   }
   return <button type="button" disabled className="min-h-11 w-full rounded-xl bg-stone-100 px-4 py-2.5 text-sm font-bold text-stone-400">{activity.registrationNotice || '暂不可报名'}</button>
+}
+
+function CheckInDialog({ activity, busy, error, onClose, onConfirm }) {
+  const [code, setCode] = useState('')
+  const submit = (event) => {
+    event.preventDefault()
+    if (/^\d{6}$/.test(code)) onConfirm(code)
+  }
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end bg-stone-950/60 p-0 backdrop-blur-sm sm:grid sm:place-items-center sm:p-4" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <form onSubmit={submit} className="w-full max-w-md rounded-t-3xl bg-white p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-2xl sm:rounded-3xl">
+        <div className="grid h-12 w-12 place-items-center rounded-2xl bg-emerald-50 text-xl text-emerald-700">✓</div>
+        <h2 className="mt-4 text-xl font-bold text-stone-900">现场签到</h2>
+        <p className="mt-2 text-sm leading-6 text-stone-500">{activity.title} · 请输入工作人员现场展示的6位签到码。</p>
+        <input autoFocus inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="请输入6位签到码" className="form-input mt-5 min-h-14 text-center font-mono text-2xl font-black tracking-[0.3em]" />
+        {error && <div role="alert" className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+        <div className="mt-5 grid grid-cols-2 gap-2"><button type="button" onClick={onClose} className="min-h-11 rounded-xl px-4 text-sm font-bold text-stone-500 hover:bg-stone-100">取消</button><button type="submit" disabled={busy || code.length !== 6} className="min-h-11 rounded-xl bg-emerald-600 px-4 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-40">{busy ? '正在签到…' : '确认签到'}</button></div>
+      </form>
+    </div>
+  )
 }
 
 function RegistrationBadge({ status }) {

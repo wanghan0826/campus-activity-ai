@@ -13,6 +13,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -30,6 +31,9 @@ class StudentActivityServiceTest {
 
     @Autowired
     private StudentActivityService studentActivityService;
+
+    @Autowired
+    private CheckInManagementService checkInManagementService;
 
     @Autowired
     private ActivityRepository activityRepository;
@@ -105,6 +109,50 @@ class StudentActivityServiceTest {
         assertThatThrownBy(() -> studentActivityService.cancel(started.getId(), "student_001"))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("已经开始");
+    }
+
+    @Test
+    void shouldSupportSelfCheckInManualCorrectionAndCsvExport() {
+        Activity published = publish(completeResult(false, 20));
+        studentActivityService.register(published.getId(), "student_001");
+
+        var opened = checkInManagementService.openCheckIn(published.getId(), "publisher_test_001");
+        assertThat(opened.isCheckInOpen()).isTrue();
+        assertThat(opened.getCheckInCode()).matches("\\d{6}");
+        assertThat(opened.getApprovedCount()).isEqualTo(1);
+
+        String wrongCode = "000000".equals(opened.getCheckInCode()) ? "000001" : "000000";
+        assertThatThrownBy(() -> studentActivityService.checkIn(published.getId(), "student_001", wrongCode))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("签到码不正确");
+
+        StudentActivityView checkedIn = studentActivityService.checkIn(
+                published.getId(), "student_001", opened.getCheckInCode());
+        assertThat(checkedIn.isCheckedIn()).isTrue();
+        assertThat(checkedIn.getCheckedInAt()).isNotNull();
+
+        var roster = checkInManagementService.getRoster(published.getId(), "publisher_test_001");
+        assertThat(roster.getCheckedInCount()).isEqualTo(1);
+        assertThat(roster.getAbsentCount()).isZero();
+        assertThat(roster.getRegistrations()).singleElement()
+                .satisfies(item -> assertThat(item.getStudentName()).isEqualTo("学生用户"));
+
+        assertThatThrownBy(() -> studentActivityService.cancel(published.getId(), "student_001"))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("已经完成签到");
+
+        byte[] csv = checkInManagementService.exportCsv(published.getId(), "publisher_test_001");
+        String csvText = new String(csv, StandardCharsets.UTF_8);
+        assertThat(csvText).startsWith("\uFEFF序号,学号/工号");
+        assertThat(csvText).contains("学生用户", "已签到", "学生现场签到");
+
+        Long registrationId = roster.getRegistrations().get(0).getRegistrationId();
+        var undone = checkInManagementService.undoCheckIn(
+                published.getId(), registrationId, "publisher_test_001");
+        assertThat(undone.getCheckedInCount()).isZero();
+        var manual = checkInManagementService.manualCheckIn(
+                published.getId(), registrationId, "publisher_test_001");
+        assertThat(manual.getRegistrations().get(0).getCheckInMethod()).isEqualTo("MANUAL");
     }
 
     private Activity publish(ActivityParsedResult result) {

@@ -194,6 +194,48 @@ export async function cancelActivityRegistration(id) {
   return data
 }
 
+export async function studentCheckIn(id, code) {
+  const { data } = await api.post(`/student/activities/${id}/check-in`, { code })
+  return data
+}
+
+export async function getCheckInRoster(activityId) {
+  const { data } = await api.get(`/activities/${activityId}/check-in`)
+  return data
+}
+
+export async function openActivityCheckIn(activityId) {
+  const { data } = await api.post(`/activities/${activityId}/check-in/open`)
+  return data
+}
+
+export async function closeActivityCheckIn(activityId) {
+  const { data } = await api.post(`/activities/${activityId}/check-in/close`)
+  return data
+}
+
+export async function manualCheckIn(activityId, registrationId) {
+  const { data } = await api.post(`/activities/${activityId}/check-in/registrations/${registrationId}`)
+  return data
+}
+
+export async function undoManualCheckIn(activityId, registrationId) {
+  const { data } = await api.delete(`/activities/${activityId}/check-in/registrations/${registrationId}`)
+  return data
+}
+
+export async function downloadCheckInCsv(activityId, fileName = `activity-${activityId}-attendance.csv`) {
+  const { data } = await api.get(`/activities/${activityId}/check-in/export`, { responseType: 'blob' })
+  const url = window.URL.createObjectURL(data)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = fileName
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.URL.revokeObjectURL(url)
+}
+
 export function getApiErrorMessage(error, fallback = '请求失败，请稍后重试') {
   if (!error.response) {
     return error.code === 'ECONNABORTED'

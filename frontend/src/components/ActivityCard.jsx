@@ -392,7 +392,7 @@ function Field({ field, value, missing, onChange }) {
   } else if (field.type === 'checkIn') {
     control = (
       <select value={value || 'QR'} onChange={(event) => onChange(event.target.value)} className={classes}>
-        <option value="QR">二维码签到</option>
+        <option value="QR">现场签到码</option>
         <option value="MANUAL">人工签到</option>
         <option value="NONE">无需签到</option>
       </select>

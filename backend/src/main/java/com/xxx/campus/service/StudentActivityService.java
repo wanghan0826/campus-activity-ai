@@ -12,6 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -86,11 +88,44 @@ public class StudentActivityService {
         if (!ACTIVE_STATUSES.contains(registration.getStatus())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "当前报名已取消");
         }
+        if (Boolean.TRUE.equals(registration.getCheckedIn())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "已经完成签到，无法取消报名");
+        }
         Activity activity = registration.getActivity();
         if (activity.getStartTime() != null && !LocalDateTime.now().isBefore(activity.getStartTime())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "活动已经开始，无法取消报名");
         }
         registration.setStatus(STATUS_CANCELLED);
+        registrationRepository.save(registration);
+        return toView(activity, studentId);
+    }
+
+    @Transactional
+    public StudentActivityView checkIn(Long activityId, String studentId, String code) {
+        Activity activity = activityRepository.findByIdForUpdate(activityId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "活动不存在"));
+        ensurePublished(activity);
+        ActivityRegistration registration = registrationRepository.findByActivityIdAndStudentId(activityId, studentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "请先报名活动"));
+        if (!STATUS_APPROVED.equals(registration.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "报名尚未通过，暂时不能签到");
+        }
+        if (Boolean.TRUE.equals(registration.getCheckedIn())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "你已经完成签到");
+        }
+        if (!"QR".equals(activity.getCheckInMode())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "请到现场工作人员处签到");
+        }
+        if (!Boolean.TRUE.equals(activity.getCheckInOpen())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "签到尚未开放");
+        }
+        if (!sameCode(activity.getCheckInCode(), code)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "签到码不正确");
+        }
+        registration.setCheckedIn(true);
+        registration.setCheckedInAt(LocalDateTime.now());
+        registration.setCheckInMethod("SELF_CODE");
+        registration.setCheckedInBy(studentId);
         registrationRepository.save(registration);
         return toView(activity, studentId);
     }
@@ -101,6 +136,7 @@ public class StudentActivityService {
         long registeredCount = registrationRepository.countByActivityIdAndStatusIn(activity.getId(), ACTIVE_STATUSES);
         String registrationStatus = registration == null ? null : registration.getStatus();
         RegistrationAvailability availability = availability(activity, registrationStatus);
+        CheckInAvailability checkInAvailability = checkInAvailability(activity, registration);
 
         return StudentActivityView.builder()
                 .id(activity.getId())
@@ -124,15 +160,39 @@ public class StudentActivityService {
                 .secondClassCredits(activity.getSecondClassCredits())
                 .volunteerHours(activity.getVolunteerHours())
                 .checkInMode(activity.getCheckInMode())
+                .checkInOpen(Boolean.TRUE.equals(activity.getCheckInOpen()))
                 .participationRequirements(activity.getParticipationRequirements())
                 .schedule(activity.getSchedule())
                 .materials(activity.getMaterials())
                 .registeredCount(registeredCount)
                 .registrationStatus(registrationStatus)
-                .registeredAt(registration == null ? null : registration.getUpdatedAt())
+                .registeredAt(registration == null ? null : registration.getCreatedAt())
                 .canRegister(availability.canRegister())
                 .registrationNotice(availability.notice())
+                .checkedIn(registration != null && Boolean.TRUE.equals(registration.getCheckedIn()))
+                .checkedInAt(registration == null ? null : registration.getCheckedInAt())
+                .canCheckIn(checkInAvailability.canCheckIn())
+                .checkInNotice(checkInAvailability.notice())
                 .build();
+    }
+
+    private CheckInAvailability checkInAvailability(Activity activity, ActivityRegistration registration) {
+        if (registration != null && Boolean.TRUE.equals(registration.getCheckedIn())) {
+            return new CheckInAvailability(false, "已完成签到");
+        }
+        if (registration == null || !STATUS_APPROVED.equals(registration.getStatus())) {
+            return new CheckInAvailability(false, "报名成功后方可签到");
+        }
+        if ("NONE".equals(activity.getCheckInMode())) {
+            return new CheckInAvailability(false, "本活动无需签到");
+        }
+        if ("MANUAL".equals(activity.getCheckInMode())) {
+            return new CheckInAvailability(false, "请到现场工作人员处签到");
+        }
+        if (!Boolean.TRUE.equals(activity.getCheckInOpen())) {
+            return new CheckInAvailability(false, "签到尚未开放");
+        }
+        return new CheckInAvailability(true, "输入现场签到码完成签到");
     }
 
     private RegistrationAvailability availability(Activity activity, String registrationStatus) {
@@ -196,5 +256,14 @@ public class StudentActivityService {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
+    private boolean sameCode(String expected, String actual) {
+        if (expected == null || actual == null) return false;
+        return MessageDigest.isEqual(
+                expected.getBytes(StandardCharsets.UTF_8),
+                actual.trim().getBytes(StandardCharsets.UTF_8)
+        );
+    }
+
     private record RegistrationAvailability(boolean canRegister, String notice) {}
+    private record CheckInAvailability(boolean canCheckIn, String notice) {}
 }

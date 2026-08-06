@@ -12,5 +12,9 @@ public interface ActivityRegistrationRepository extends JpaRepository<ActivityRe
 
     List<ActivityRegistration> findByStudentIdOrderByUpdatedAtDesc(String studentId);
 
+    List<ActivityRegistration> findByActivityIdOrderByCreatedAtAsc(Long activityId);
+
+    Optional<ActivityRegistration> findByIdAndActivityId(Long id, Long activityId);
+
     long countByActivityIdAndStatusIn(Long activityId, Collection<String> statuses);
 }

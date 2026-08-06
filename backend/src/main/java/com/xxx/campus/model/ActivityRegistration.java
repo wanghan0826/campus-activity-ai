@@ -35,6 +35,20 @@ public class ActivityRegistration {
     @Column(nullable = false, length = 20)
     private String status;
 
+    @Column(name = "checked_in", nullable = false)
+    @Builder.Default
+    private Boolean checkedIn = false;
+
+    @Column(name = "checked_in_at")
+    private LocalDateTime checkedInAt;
+
+    /** SELF_CODE：学生现场报码签到，MANUAL：工作人员后台签到。 */
+    @Column(name = "check_in_method", length = 20)
+    private String checkInMethod;
+
+    @Column(name = "checked_in_by", length = 100)
+    private String checkedInBy;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 

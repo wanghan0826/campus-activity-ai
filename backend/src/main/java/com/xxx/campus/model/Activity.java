@@ -83,6 +83,15 @@ public class Activity {
     @Builder.Default
     private String checkInMode = "QR";
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean checkInOpen = false;
+
+    @Column(length = 10)
+    private String checkInCode;
+
+    private LocalDateTime checkInOpenedAt;
+
     @Column(length = 500)
     private String participationRequirements;
 
