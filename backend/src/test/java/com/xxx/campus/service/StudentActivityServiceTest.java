@@ -36,6 +36,9 @@ class StudentActivityServiceTest {
     private CheckInManagementService checkInManagementService;
 
     @Autowired
+    private RegistrationManagementService registrationManagementService;
+
+    @Autowired
     private ActivityRepository activityRepository;
 
     @Autowired
@@ -62,7 +65,7 @@ class StudentActivityServiceTest {
 
         StudentActivityView registered = studentActivityService.register(published.getId(), "student_001");
         assertThat(registered.getRegistrationStatus()).isEqualTo("PENDING");
-        assertThat(registered.getRegisteredCount()).isEqualTo(1);
+        assertThat(registered.getRegisteredCount()).isZero();
         assertThat(registered.isCanRegister()).isFalse();
 
         assertThatThrownBy(() -> studentActivityService.register(published.getId(), "student_001"))
@@ -89,6 +92,62 @@ class StudentActivityServiceTest {
         assertThatThrownBy(() -> studentActivityService.register(published.getId(), "student_002"))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("名额已满");
+    }
+
+    @Test
+    void shouldReviewRegistrationsAndOnlyCountApprovedStudentsAgainstCapacity() {
+        Activity reviewed = publish(completeResult(true, 1));
+        studentActivityService.register(reviewed.getId(), "student_001");
+        studentActivityService.register(reviewed.getId(), "student_002");
+
+        var initial = registrationManagementService.getRegistrations(
+                reviewed.getId(), "publisher_test_001");
+        assertThat(initial.isApprovalRequired()).isTrue();
+        assertThat(initial.getPendingCount()).isEqualTo(2);
+        assertThat(initial.getApprovedCount()).isZero();
+        assertThat(initial.getRemainingCapacity()).isEqualTo(1);
+
+        Long secondId = initial.getRegistrations().stream()
+                .filter(item -> "student_002".equals(item.getStudentId()))
+                .findFirst().orElseThrow().getRegistrationId();
+        var rejected = registrationManagementService.reject(
+                reviewed.getId(), secondId, "publisher_test_001", "材料不完整");
+        assertThat(rejected.getRejectedCount()).isEqualTo(1);
+        assertThat(studentActivityService.getPublishedActivity(reviewed.getId(), "student_002"))
+                .satisfies(view -> {
+                    assertThat(view.getRegistrationStatus()).isEqualTo("REJECTED");
+                    assertThat(view.getRegistrationReviewComment()).isEqualTo("材料不完整");
+                    assertThat(view.isCanRegister()).isTrue();
+                });
+
+        studentActivityService.register(reviewed.getId(), "student_002");
+        var reapplied = registrationManagementService.getRegistrations(
+                reviewed.getId(), "publisher_test_001");
+        Long firstId = reapplied.getRegistrations().stream()
+                .filter(item -> "student_001".equals(item.getStudentId()))
+                .findFirst().orElseThrow().getRegistrationId();
+        registrationManagementService.approve(
+                reviewed.getId(), firstId, "publisher_test_001", "同意报名");
+
+        assertThatThrownBy(() -> registrationManagementService.approve(
+                reviewed.getId(), secondId, "publisher_test_001", "同意报名"))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("名额已满");
+
+        var finalView = registrationManagementService.getRegistrations(
+                reviewed.getId(), "publisher_test_001");
+        assertThat(finalView.getApprovedCount()).isEqualTo(1);
+        assertThat(finalView.getPendingCount()).isEqualTo(1);
+        assertThat(finalView.getRemainingCapacity()).isZero();
+
+        Activity firstCome = publish(completeResult(false, 2));
+        studentActivityService.register(firstCome.getId(), "student_001");
+        Long directId = registrationRepository.findByActivityIdAndStudentId(
+                firstCome.getId(), "student_001").orElseThrow().getId();
+        assertThatThrownBy(() -> registrationManagementService.approve(
+                firstCome.getId(), directId, "publisher_test_001", null))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("先到先得");
     }
 
     @Test

@@ -41,6 +41,7 @@ public class CheckInManagementService {
                 .toList();
         long approved = countStatus(items, StudentActivityService.STATUS_APPROVED);
         long pending = countStatus(items, StudentActivityService.STATUS_PENDING);
+        long rejected = countStatus(items, StudentActivityService.STATUS_REJECTED);
         long cancelled = countStatus(items, StudentActivityService.STATUS_CANCELLED);
         long checkedIn = items.stream().filter(RegistrationRosterItem::isCheckedIn).count();
 
@@ -54,9 +55,10 @@ public class CheckInManagementService {
                 .checkInOpen(Boolean.TRUE.equals(activity.getCheckInOpen()))
                 .checkInCode(activity.getCheckInCode())
                 .checkInOpenedAt(activity.getCheckInOpenedAt())
-                .totalCount(approved + pending)
+                .totalCount(approved)
                 .approvedCount(approved)
                 .pendingCount(pending)
+                .rejectedCount(rejected)
                 .cancelledCount(cancelled)
                 .checkedInCount(checkedIn)
                 .absentCount(Math.max(approved - checkedIn, 0))
@@ -152,6 +154,9 @@ public class CheckInManagementService {
                 .checkedInAt(registration.getCheckedInAt())
                 .checkInMethod(registration.getCheckInMethod())
                 .checkedInBy(registration.getCheckedInBy())
+                .reviewedAt(registration.getReviewedAt())
+                .reviewedBy(registration.getReviewedBy())
+                .reviewComment(registration.getReviewComment())
                 .build();
     }
 
@@ -187,6 +192,7 @@ public class CheckInManagementService {
         return switch (status) {
             case StudentActivityService.STATUS_APPROVED -> "报名成功";
             case StudentActivityService.STATUS_PENDING -> "待审核";
+            case StudentActivityService.STATUS_REJECTED -> "审核未通过";
             case StudentActivityService.STATUS_CANCELLED -> "已取消";
             default -> status == null ? "" : status;
         };

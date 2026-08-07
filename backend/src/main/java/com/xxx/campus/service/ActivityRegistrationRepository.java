@@ -17,4 +17,6 @@ public interface ActivityRegistrationRepository extends JpaRepository<ActivityRe
     Optional<ActivityRegistration> findByIdAndActivityId(Long id, Long activityId);
 
     long countByActivityIdAndStatusIn(Long activityId, Collection<String> statuses);
+
+    long countByActivityIdAndStatus(Long activityId, String status);
 }

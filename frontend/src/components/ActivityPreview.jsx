@@ -93,7 +93,7 @@ export default function ActivityPreview({ activity = {}, compact = false }) {
         <div className="grid gap-3 border-t border-stone-100 pt-5 text-sm sm:grid-cols-2">
           <Info label="报名时间" value={`${formatDateTime(activity.regStartTime)} — ${formatDateTime(activity.regEndTime)}`} />
           <Info label="人数上限" value={activity.maxParticipants ? `${activity.maxParticipants} 人` : '不限'} />
-          <Info label="报名方式" value={activity.registrationRequired === false ? '无需报名，直接参与' : (activity.registrationApprovalRequired ? '报名后需教师审核' : '报名后直接通过')} />
+          <Info label="报名方式" value={activity.registrationRequired === false ? '无需报名，直接参与' : (activity.registrationApprovalRequired ? '需要审核（通过后占用名额）' : '先到先得（提交后立即成功）')} />
           <Info label="签到方式" value={CHECK_IN_LABELS[activity.checkInMode] || '现场签到码'} />
           <Info label="活动认定" value={RECOGNITION_LABELS[activity.recognitionType] || RECOGNITION_LABELS.NONE} />
           {(activity.recognitionType === 'CREDIT' || activity.recognitionType === 'BOTH') && <Info label="第二课堂学分" value={`${activity.secondClassCredits || 0} 分`} />}

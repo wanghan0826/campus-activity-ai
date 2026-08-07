@@ -6,6 +6,7 @@ import ActivityManagement from './pages/ActivityManagement.jsx'
 import CheckInManagement from './pages/CheckInManagement.jsx'
 import CreateActivity from './pages/CreateActivity.jsx'
 import LoginPage from './pages/LoginPage.jsx'
+import RegistrationManagement from './pages/RegistrationManagement.jsx'
 import StudentActivities from './pages/StudentActivities.jsx'
 
 const ROLE_LABELS = { PUBLISHER: '活动发布人', COLLEGE_REVIEWER: '学院审核老师', COLLEGE_LEADER: '学院领导', STUDENT: '学生' }
@@ -20,6 +21,7 @@ export default function App() {
   const [page, setPage] = useState('manage')
   const [editingActivity, setEditingActivity] = useState(null)
   const [checkInActivity, setCheckInActivity] = useState(null)
+  const [registrationActivity, setRegistrationActivity] = useState(null)
   const [user, setUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
   const [showAiSettings, setShowAiSettings] = useState(false)
@@ -50,6 +52,7 @@ export default function App() {
       setUser(null)
       setEditingActivity(null)
       setCheckInActivity(null)
+      setRegistrationActivity(null)
       setShowAiSettings(false)
     }
     window.addEventListener('campus-auth-expired', handleExpired)
@@ -63,6 +66,7 @@ export default function App() {
   const navigate = (nextPage) => {
     setEditingActivity(null)
     setCheckInActivity(null)
+    setRegistrationActivity(null)
     setPage(nextPage)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -72,6 +76,7 @@ export default function App() {
     setPage(homePageForRole(loggedInUser.role))
     setEditingActivity(null)
     setCheckInActivity(null)
+    setRegistrationActivity(null)
   }
 
   const handleLogout = async () => {
@@ -79,12 +84,14 @@ export default function App() {
     setUser(null)
     setEditingActivity(null)
     setCheckInActivity(null)
+    setRegistrationActivity(null)
     setShowAiSettings(false)
   }
 
   const editActivity = (activity) => {
     setEditingActivity(activity)
     setCheckInActivity(null)
+    setRegistrationActivity(null)
     setPage('create')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -92,7 +99,16 @@ export default function App() {
   const openCheckIn = (activity) => {
     setCheckInActivity(activity)
     setEditingActivity(null)
+    setRegistrationActivity(null)
     setPage('checkIn')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const openRegistrations = (activity) => {
+    setRegistrationActivity(activity)
+    setEditingActivity(null)
+    setCheckInActivity(null)
+    setPage('registration')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -115,7 +131,7 @@ export default function App() {
             {isPublisher ? (
               <>
                 <NavButton active={page === 'create'} onClick={() => navigate('create')}>创建活动</NavButton>
-                <NavButton active={['manage', 'checkIn'].includes(page)} onClick={() => navigate('manage')}>活动管理</NavButton>
+                <NavButton active={['manage', 'checkIn', 'registration'].includes(page)} onClick={() => navigate('manage')}>活动管理</NavButton>
               </>
             ) : isStudent ? (
               <>
@@ -141,12 +157,14 @@ export default function App() {
       <main>
         {isStudent ? (
           <StudentActivities section={page === 'studentRegistrations' ? 'registrations' : 'activities'} onNavigate={(section) => navigate(section === 'registrations' ? 'studentRegistrations' : 'studentActivities')} />
+        ) : page === 'registration' && isPublisher && registrationActivity ? (
+          <RegistrationManagement activity={registrationActivity} onBack={() => navigate('manage')} />
         ) : page === 'checkIn' && isPublisher && checkInActivity ? (
           <CheckInManagement activity={checkInActivity} onBack={() => navigate('manage')} />
         ) : page === 'create' && isPublisher ? (
           <CreateActivity editingActivity={editingActivity} onActivityChanged={(activity, type) => { if (type === 'submitted') navigate('manage') }} onCancelEdit={() => navigate('manage')} />
         ) : page === 'manage' && isPublisher ? (
-          <ActivityManagement onCreate={() => navigate('create')} onEdit={editActivity} onCheckIn={openCheckIn} />
+          <ActivityManagement onCreate={() => navigate('create')} onEdit={editActivity} onCheckIn={openCheckIn} onRegistrations={openRegistrations} />
         ) : (
           <ApprovalWorkbench identity={user} />
         )}
@@ -162,7 +180,7 @@ export default function App() {
           ) : (
             <>
               <MobileNav active={page === 'create'} onClick={() => navigate('create')} icon="＋">创建活动</MobileNav>
-              <MobileNav active={['manage', 'checkIn'].includes(page)} onClick={() => navigate('manage')} icon="☷">活动管理</MobileNav>
+              <MobileNav active={['manage', 'checkIn', 'registration'].includes(page)} onClick={() => navigate('manage')} icon="☷">活动管理</MobileNav>
             </>
           )}
         </nav>

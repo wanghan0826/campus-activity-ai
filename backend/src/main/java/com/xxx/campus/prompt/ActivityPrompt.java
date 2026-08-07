@@ -40,7 +40,7 @@ public class ActivityPrompt {
         - organizer 默认为"待定"如果文档未提及。
         - maxParticipants 如果未提及返回 null。
         - targetAudience、contactInfo、budget 未提及均返回 null，不要编造关键业务信息。
-        - registrationRequired 表示是否需要报名，registrationApprovalRequired 表示报名是否需要教师审核。
+        - registrationRequired 表示是否需要报名；registrationApprovalRequired 为 false 时采用先到先得并立即成功，为 true 时先进入待审核、由发布人处理，通过后才占用正式名额。
         - recognitionType 只能是 NONE（不认定）、CREDIT（第二课堂学分）、VOLUNTEER（志愿时长）或 BOTH（两者都有）。
         - checkInMode 只能是 QR（现场签到码）、MANUAL（人工签到）或 NONE（无需签到）。
         - 学分、志愿时长、报名审核、签到方式及认定要求未提及时返回 null，不要自行编造。

@@ -199,6 +199,21 @@ export async function studentCheckIn(id, code) {
   return data
 }
 
+export async function getActivityRegistrations(activityId) {
+  const { data } = await api.get(`/activities/${activityId}/registrations`)
+  return data
+}
+
+export async function approveActivityRegistration(activityId, registrationId, comment = '') {
+  const { data } = await api.post(`/activities/${activityId}/registrations/${registrationId}/approve`, { comment })
+  return data
+}
+
+export async function rejectActivityRegistration(activityId, registrationId, comment = '') {
+  const { data } = await api.post(`/activities/${activityId}/registrations/${registrationId}/reject`, { comment })
+  return data
+}
+
 export async function getCheckInRoster(activityId) {
   const { data } = await api.get(`/activities/${activityId}/check-in`)
   return data

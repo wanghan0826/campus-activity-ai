@@ -20,6 +20,7 @@ const CATEGORY_LABELS = { ART: '艺术类', SPORTS: '艺体类', PRACTICE: '实�
 const STATUS_META = {
   PENDING: { label: '待审核', classes: 'bg-amber-100 text-amber-800' },
   APPROVED: { label: '报名成功', classes: 'bg-emerald-100 text-emerald-700' },
+  REJECTED: { label: '未通过', classes: 'bg-red-100 text-red-700' },
   CANCELLED: { label: '已取消', classes: 'bg-stone-100 text-stone-500' },
 }
 
@@ -68,7 +69,7 @@ export default function StudentActivities({ section = 'activities', onNavigate }
   const displayedActivities = useMemo(() => {
     if (section !== 'registrations') return activities
     if (registrationFilter === 'ALL') return activities
-    if (registrationFilter === 'CANCELLED') return activities.filter((activity) => activity.registrationStatus === 'CANCELLED')
+    if (['CANCELLED', 'REJECTED'].includes(registrationFilter)) return activities.filter((activity) => activity.registrationStatus === registrationFilter)
     return activities.filter((activity) => ['PENDING', 'APPROVED'].includes(activity.registrationStatus))
   }, [activities, registrationFilter, section])
 
@@ -173,7 +174,7 @@ export default function StudentActivities({ section = 'activities', onNavigate }
 
       {section === 'registrations' && (
         <div className="mt-6 flex gap-2 overflow-x-auto">
-          {[['ACTIVE', '进行中'], ['ALL', '全部'], ['CANCELLED', '已取消']].map(([key, label]) => (
+          {[['ACTIVE', '进行中'], ['REJECTED', '未通过'], ['CANCELLED', '已取消'], ['ALL', '全部']].map(([key, label]) => (
             <button key={key} type="button" onClick={() => setRegistrationFilter(key)} className={`shrink-0 rounded-full px-4 py-2 text-xs font-bold ${registrationFilter === key ? 'bg-stone-900 text-white' : 'bg-white text-stone-600 ring-1 ring-stone-200'}`}>{label}</button>
           ))}
         </div>
@@ -249,6 +250,9 @@ function RegistrationAction({ activity, busy, onRegister, onCancel, onCheckIn })
   }
   if (active) {
     return <div><div className="mb-2 text-center text-xs text-stone-400">{activity.checkInNotice}</div><div className={`grid gap-2 ${activity.canCheckIn ? 'grid-cols-2' : 'grid-cols-1'}`}>{activity.canCheckIn && <button type="button" disabled={busy} onClick={onCheckIn} className="min-h-11 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50">现场签到</button>}<button type="button" disabled={busy} onClick={onCancel} className="min-h-11 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 disabled:opacity-50">{busy ? '正在处理…' : '取消报名'}</button></div></div>
+  }
+  if (activity.registrationStatus === 'REJECTED') {
+    return <div className="space-y-2"><div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs leading-5 text-red-700"><span className="font-bold">审核未通过</span>{activity.registrationReviewComment ? `：${activity.registrationReviewComment}` : ''}</div>{activity.canRegister ? <button type="button" disabled={busy} onClick={onRegister} className="min-h-11 w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50">{busy ? '正在提交…' : '重新申请'}</button> : <button type="button" disabled className="min-h-11 w-full rounded-xl bg-stone-100 px-4 py-2.5 text-sm font-bold text-stone-400">{activity.registrationNotice || '暂不可重新申请'}</button>}</div>
   }
   if (activity.canRegister) {
     return <button type="button" disabled={busy} onClick={onRegister} className="min-h-11 w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50">{busy ? '正在报名…' : activity.registrationStatus === 'CANCELLED' ? '重新报名' : '立即报名'}</button>

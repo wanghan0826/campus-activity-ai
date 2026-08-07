@@ -8,22 +8,18 @@ import java.util.List;
 
 @Data
 @Builder
-public class CheckInRosterView {
+public class RegistrationManagementView {
     private Long activityId;
     private String activityTitle;
     private String location;
     private LocalDateTime startTime;
-    private LocalDateTime endTime;
-    private String checkInMode;
-    private boolean checkInOpen;
-    private String checkInCode;
-    private LocalDateTime checkInOpenedAt;
-    private long totalCount;
+    private boolean approvalRequired;
+    private Integer maxParticipants;
+    private Long remainingCapacity;
+    private long applicationCount;
     private long approvedCount;
     private long pendingCount;
     private long rejectedCount;
     private long cancelledCount;
-    private long checkedInCount;
-    private long absentCount;
     private List<RegistrationRosterItem> registrations;
 }

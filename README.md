@@ -9,11 +9,12 @@
 - 多轮补充：信息不完整时继续输入，AI 重新整理方案
 - 相对日期识别：按 `Asia/Shanghai` 当天时间自动换算“星期四”“本周日”“下周五”等表达，公文含明确日期时以明确日期为准
 - 手动创建：保留传统表单入口
-- 报名与认定：报名开关、报名审核、现场签到码/人工签到、第二课堂学分、志愿服务时长
+- 报名与认定：可选择“先到先得”或“需要审核”，并支持现场签到码/人工签到、第二课堂学分、志愿服务时长
 - 学生视角预览：提交前检查学生端展示效果
 - 学生活动广场：仅展示已完成两级审批并正式发布的活动，支持搜索、分类筛选和详情查看
-- 在线报名：校验报名时间、活动时间和人数上限，按活动配置直接通过或进入待审核状态
-- 我的报名：按进行中、全部和已取消筛选报名记录，活动开始前可取消并重新报名
+- 在线报名：先到先得模式提交后立即成功；审核模式先进入待审核，审核通过后才占用正式名额
+- 报名管理：发布人查看报名名单，通过或拒绝待审核申请；拒绝时须填写原因，学生可查看原因并重新申请
+- 我的报名：按进行中、未通过、已取消和全部筛选报名记录，活动开始前可取消并重新报名
 - 入场签到：发布人开启现场签到并显示动态六位签到码，学生在“我的报名”中签到，工作人员可人工补签或撤销误签
 - 签到统计与导出：后台实时汇总报名、已到和缺席人数，可导出 Excel 可打开的 CSV 电子签到表，也可打印带现场签名栏的纸质签到表
 - 手机端适配：学生端提供底部导航、单列活动卡片和移动端详情弹窗
@@ -147,6 +148,9 @@ cd android
 - `GET /api/student/registrations`：查询当前学生的全部报名记录
 - `POST /api/student/activities/{id}/registrations`：报名活动
 - `DELETE /api/student/activities/{id}/registrations`：取消报名
+- `GET /api/activities/{id}/registrations`：发布人查看报名名单、状态和剩余名额
+- `POST /api/activities/{id}/registrations/{registrationId}/approve`：通过待审核报名
+- `POST /api/activities/{id}/registrations/{registrationId}/reject`：拒绝报名并填写学生可见原因
 - `POST /api/student/activities/{id}/check-in`：学生输入现场签到码完成签到
 - `GET /api/activities/{id}/check-in`：发布人查看活动签到名单与统计
 - `POST /api/activities/{id}/check-in/open`：开启现场签到并生成动态签到码

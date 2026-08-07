@@ -31,7 +31,7 @@ public class ActivityRegistration {
     @Column(name = "student_id", nullable = false, length = 100)
     private String studentId;
 
-    /** PENDING：待审核，APPROVED：报名成功，CANCELLED：已取消。 */
+    /** PENDING：待审核，APPROVED：报名成功，REJECTED：审核未通过，CANCELLED：已取消。 */
     @Column(nullable = false, length = 20)
     private String status;
 
@@ -48,6 +48,15 @@ public class ActivityRegistration {
 
     @Column(name = "checked_in_by", length = 100)
     private String checkedInBy;
+
+    @Column(name = "reviewed_at")
+    private LocalDateTime reviewedAt;
+
+    @Column(name = "reviewed_by", length = 100)
+    private String reviewedBy;
+
+    @Column(name = "review_comment", length = 500)
+    private String reviewComment;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;

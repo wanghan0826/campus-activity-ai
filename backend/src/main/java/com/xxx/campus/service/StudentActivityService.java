@@ -24,6 +24,7 @@ public class StudentActivityService {
 
     public static final String STATUS_PENDING = "PENDING";
     public static final String STATUS_APPROVED = "APPROVED";
+    public static final String STATUS_REJECTED = "REJECTED";
     public static final String STATUS_CANCELLED = "CANCELLED";
     private static final List<String> ACTIVE_STATUSES = List.of(STATUS_PENDING, STATUS_APPROVED);
     private static final Set<String> ALLOWED_CATEGORIES = Set.of("ART", "SPORTS", "PRACTICE", "LIFE", "FEATURE");
@@ -76,6 +77,14 @@ public class StudentActivityService {
         registration.setActivity(activity);
         registration.setStudentId(studentId);
         registration.setStatus(nextStatus);
+        registration.setCreatedAt(LocalDateTime.now());
+        registration.setCheckedIn(false);
+        registration.setCheckedInAt(null);
+        registration.setCheckInMethod(null);
+        registration.setCheckedInBy(null);
+        registration.setReviewedAt(null);
+        registration.setReviewedBy(null);
+        registration.setReviewComment(null);
         registrationRepository.save(registration);
         registrationRepository.flush();
         return toView(activity, studentId);
@@ -86,7 +95,7 @@ public class StudentActivityService {
         ActivityRegistration registration = registrationRepository.findByActivityIdAndStudentId(activityId, studentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "未找到报名记录"));
         if (!ACTIVE_STATUSES.contains(registration.getStatus())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "当前报名已取消");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "当前报名不能取消");
         }
         if (Boolean.TRUE.equals(registration.getCheckedIn())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "已经完成签到，无法取消报名");
@@ -133,7 +142,8 @@ public class StudentActivityService {
     private StudentActivityView toView(Activity activity, String studentId) {
         ActivityRegistration registration = registrationRepository.findByActivityIdAndStudentId(activity.getId(), studentId)
                 .orElse(null);
-        long registeredCount = registrationRepository.countByActivityIdAndStatusIn(activity.getId(), ACTIVE_STATUSES);
+        long registeredCount = registrationRepository.countByActivityIdAndStatus(
+                activity.getId(), STATUS_APPROVED);
         String registrationStatus = registration == null ? null : registration.getStatus();
         RegistrationAvailability availability = availability(activity, registrationStatus);
         CheckInAvailability checkInAvailability = checkInAvailability(activity, registration);
@@ -167,6 +177,8 @@ public class StudentActivityService {
                 .registeredCount(registeredCount)
                 .registrationStatus(registrationStatus)
                 .registeredAt(registration == null ? null : registration.getCreatedAt())
+                .registrationReviewedAt(registration == null ? null : registration.getReviewedAt())
+                .registrationReviewComment(registration == null ? null : registration.getReviewComment())
                 .canRegister(availability.canRegister())
                 .registrationNotice(availability.notice())
                 .checkedIn(registration != null && Boolean.TRUE.equals(registration.getCheckedIn()))
@@ -220,12 +232,18 @@ public class StudentActivityService {
             return new RegistrationAvailability(false, "活动已经开始");
         }
         if (activity.getMaxParticipants() != null && activity.getMaxParticipants() > 0) {
-            long count = registrationRepository.countByActivityIdAndStatusIn(activity.getId(), ACTIVE_STATUSES);
+            long count = registrationRepository.countByActivityIdAndStatus(
+                    activity.getId(), STATUS_APPROVED);
             if (count >= activity.getMaxParticipants()) {
                 return new RegistrationAvailability(false, "报名名额已满");
             }
         }
-        return new RegistrationAvailability(true, Boolean.TRUE.equals(activity.getRegistrationApprovalRequired()) ? "提交后等待审核" : "可立即报名");
+        if (STATUS_REJECTED.equals(registrationStatus)) {
+            return new RegistrationAvailability(true, "审核未通过，可重新申请");
+        }
+        return new RegistrationAvailability(true, Boolean.TRUE.equals(activity.getRegistrationApprovalRequired())
+                ? "提交申请后等待发布人审核"
+                : "先到先得，提交后立即报名成功");
     }
 
     private Activity getPublished(Long activityId) {

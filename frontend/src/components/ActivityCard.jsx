@@ -58,7 +58,7 @@ const FIELD_GROUPS = [
     description: '用于报名审核、现场签到以及第二课堂学分或志愿时长认定',
     fields: [
       { key: 'registrationRequired', label: '是否需要报名', type: 'boolean', trueLabel: '需要报名', falseLabel: '无需报名' },
-      { key: 'registrationApprovalRequired', label: '报名是否需要审核', type: 'boolean', trueLabel: '需要教师审核', falseLabel: '报名后直接通过' },
+      { key: 'registrationApprovalRequired', label: '报名方式', type: 'registrationMode' },
       { key: 'recognitionType', label: '认定方式', type: 'recognition' },
       { key: 'checkInMode', label: '签到方式', type: 'checkIn' },
       { key: 'secondClassCredits', label: '第二课堂学分', type: 'number', step: '0.1', placeholder: '例如：0.5' },
@@ -371,6 +371,13 @@ function Field({ field, value, missing, onChange }) {
       <select value={value ?? ''} onChange={(event) => onChange(event.target.value || null)} className={classes}>
         <option value="">请选择活动分类</option>
         {Object.entries(CATEGORY_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+      </select>
+    )
+  } else if (field.type === 'registrationMode') {
+    control = (
+      <select value={String(value === true)} onChange={(event) => onChange(event.target.value === 'true')} className={classes}>
+        <option value="false">先到先得（报名后立即成功）</option>
+        <option value="true">需要审核（通过后占用名额）</option>
       </select>
     )
   } else if (field.type === 'boolean') {

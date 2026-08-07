@@ -9,7 +9,7 @@ import {
   undoManualCheckIn,
 } from '../api/activity.js'
 
-const STATUS_LABELS = { APPROVED: '报名成功', PENDING: '待审核', CANCELLED: '已取消' }
+const STATUS_LABELS = { APPROVED: '报名成功', PENDING: '待审核', REJECTED: '未通过', CANCELLED: '已取消' }
 const METHOD_LABELS = { SELF_CODE: '学生现场签到', MANUAL: '工作人员签到' }
 
 export default function CheckInManagement({ activity, onBack }) {
@@ -121,11 +121,12 @@ export default function CheckInManagement({ activity, onBack }) {
         {error && <div role="alert" className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
         {success && <div role="status" className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">✓ {success}</div>}
 
-        <div className="mt-6 grid grid-cols-2 gap-2.5 lg:grid-cols-5">
+        <div className="mt-6 grid grid-cols-2 gap-2.5 lg:grid-cols-6">
           <Stat label="有效报名" value={roster.totalCount} tone="indigo" />
           <Stat label="报名成功" value={roster.approvedCount} tone="stone" />
           <Stat label="已签到" value={roster.checkedInCount} tone="emerald" />
           <Stat label="未签到" value={roster.absentCount} tone="amber" />
+          <Stat label="未通过" value={roster.rejectedCount} tone="stone" />
           <Stat label="已取消" value={roster.cancelledCount} tone="stone" />
         </div>
 
@@ -138,7 +139,7 @@ export default function CheckInManagement({ activity, onBack }) {
 
         <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-stone-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
           <div className="flex gap-2 overflow-x-auto">
-            {[['APPROVED', '报名成功'], ['PENDING', '待审核'], ['CANCELLED', '已取消'], ['ALL', '全部']].map(([key, label]) => <button key={key} type="button" onClick={() => setStatus(key)} className={`shrink-0 rounded-full px-4 py-2 text-xs font-bold ${status === key ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-600'}`}>{label}</button>)}
+            {[['APPROVED', '报名成功'], ['PENDING', '待审核'], ['REJECTED', '未通过'], ['CANCELLED', '已取消'], ['ALL', '全部']].map(([key, label]) => <button key={key} type="button" onClick={() => setStatus(key)} className={`shrink-0 rounded-full px-4 py-2 text-xs font-bold ${status === key ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-600'}`}>{label}</button>)}
           </div>
           <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索姓名、学号或学院" className="form-input sm:max-w-xs" />
         </div>

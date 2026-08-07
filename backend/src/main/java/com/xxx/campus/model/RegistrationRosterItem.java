@@ -19,4 +19,7 @@ public class RegistrationRosterItem {
     private LocalDateTime checkedInAt;
     private String checkInMethod;
     private String checkedInBy;
+    private LocalDateTime reviewedAt;
+    private String reviewedBy;
+    private String reviewComment;
 }

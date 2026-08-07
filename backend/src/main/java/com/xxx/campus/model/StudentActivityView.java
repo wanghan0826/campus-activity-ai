@@ -39,6 +39,8 @@ public class StudentActivityView {
     private long registeredCount;
     private String registrationStatus;
     private LocalDateTime registeredAt;
+    private LocalDateTime registrationReviewedAt;
+    private String registrationReviewComment;
     private boolean canRegister;
     private String registrationNotice;
     private boolean checkedIn;
