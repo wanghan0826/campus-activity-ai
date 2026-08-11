@@ -4,6 +4,8 @@ server:
 spring:
   application:
     name: campus-activity
+  profiles:
+    active: local
 
   autoconfigure:
     exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
@@ -31,6 +33,17 @@ auth:
     reviewer-password: ${AUTH_REVIEWER_PASSWORD:reviewer123}
     leader-password: ${AUTH_LEADER_PASSWORD:leader123}
     student-password: ${AUTH_STUDENT_PASSWORD:student123}
+
+# ---- 企业微信配置（本地开发用 application-local.yml 覆盖）----
+wecom:
+  corp-id: ${WECOM_CORP_ID:}
+  agent-id: ${WECOM_AGENT_ID:}
+  secret: ${WECOM_SECRET:}
+  base-url: https://qyapi.weixin.qq.com
+  notification-enabled: true
+  calendar-enabled: true
+  organizer-userid: ${WECOM_ORGANIZER_USERID:}
+  frontend-url: ${WECOM_FRONTEND_URL:}
 
 # ---- AI 配置 ----
 ai:

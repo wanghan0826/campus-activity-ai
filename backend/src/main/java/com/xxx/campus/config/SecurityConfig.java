@@ -36,10 +36,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/ai/images/**").permitAll()
-                        .requestMatchers("/api/student/**").hasRole("STUDENT")
-                        .requestMatchers("/api/activities/**", "/api/ai/**").hasRole("PUBLISHER")
-                        .requestMatchers("/api/approvals/**")
-                        .hasAnyRole("PUBLISHER", "COLLEGE_REVIEWER", "COLLEGE_LEADER")
+                        .requestMatchers("/api/student/**").authenticated()
+                        .requestMatchers("/api/activities/**", "/api/ai/**").authenticated()
+                        .requestMatchers("/api/approvals/**").authenticated()
                         .anyRequest().authenticated())
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint((request, response, exception) -> {

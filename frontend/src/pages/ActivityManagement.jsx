@@ -105,73 +105,103 @@ export default function ActivityManagement({ onCreate, onEdit, onCheckIn, onRegi
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-3 py-5 sm:px-6 sm:py-10">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <div className="mb-2 flex items-center gap-2 text-xs font-bold text-indigo-600">
-            <span className="grid h-6 w-6 place-items-center rounded-lg bg-indigo-600 text-white">2</span>
-            教师端 · 活动管理
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-stone-950 sm:text-3xl">活动管理</h1>
-          <p className="mt-2 text-sm text-stone-500">统一查看草稿、审批进度和发布状态。</p>
+          <h1 className="text-xl font-bold text-gray-900">活动管理</h1>
+          <p className="text-sm text-gray-500 mt-1">共 {stats.ALL || 0} 个活动 · 草稿 {stats.DRAFT || 0} · 审批中 {stats.PENDING_APPROVAL || 0} · 已发布 {stats.PUBLISHED || 0}</p>
         </div>
-        <button type="button" onClick={onCreate} className="w-full rounded-xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-700 sm:w-auto">+ 创建活动</button>
+        <div className="flex gap-2">
+          <button className="btn-secondary" onClick={() => downloadCsv(activities)}>导出 CSV</button>
+          <button className="btn-primary" onClick={onCreate}>+ 创建活动</button>
+        </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-2.5 sm:mt-7 sm:gap-3 xl:grid-cols-4">
-        {summaryCards.map((card) => <SummaryCard key={card.label} {...card} />)}
+      <div className="admin-card mb-6" style={{ padding: '12px 16px' }}>
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+          <div className="flex gap-1.5 flex-wrap">
+            {FILTERS.map(([k, label]) => (
+              <button key={k} onClick={() => setStatus(k)} className={`px-2.5 py-1 text-xs font-medium rounded border transition ${status === k ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}>
+                {label}{stats[k] !== undefined ? ` (${stats[k]})` : ''}
+              </button>
+            ))}
+          </div>
+          <input value={keyword} onChange={e => setKeyword(e.target.value)} placeholder="搜索…" className="form-input max-w-48" />
+        </div>
       </div>
 
-      <section className="mt-5 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm sm:mt-6 sm:rounded-[24px]">
-        <div className="border-b border-stone-100 p-4 sm:p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              {FILTERS.map(([key, label]) => (
-                <button key={key} type="button" onClick={() => setStatus(key)} className={`shrink-0 rounded-full px-3.5 py-2 text-xs font-semibold transition ${status === key ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}>
-                  {label}{stats[key] !== undefined && <span className="ml-1.5 opacity-70">{stats[key]}</span>}
-                </button>
+      {error && <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 mb-4">{error} <button onClick={loadActivities} className="font-medium underline">重试</button></div>}
+
+      {loading ? (
+        <div className="text-center py-16 text-gray-400 text-sm">加载中…</div>
+      ) : activities.length === 0 ? (
+        <div className="admin-card text-center py-16 text-gray-400 text-sm">暂无活动</div>
+      ) : (
+        <div className="admin-card" style={{ padding: 0 }}>
+          <table className="admin-table">
+            <thead><tr><th>活动标题</th><th>分类</th><th>时间</th><th>地点</th><th>审批进度</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody>
+              {activities.map(a => (
+                <tr key={a.id}>
+                  <td className="font-medium text-gray-900 cursor-pointer hover:text-blue-600" onClick={() => setPreview(a)}>{a.title || '未命名'}</td>
+                  <td>{CATEGORY_LABELS[a.category] || '-'}</td>
+                  <td className="text-sm">{fmtDate(a.startTime)}</td>
+                  <td className="text-sm max-w-32 truncate">{a.location || '-'}</td>
+                  <td className="text-sm">{approvalLabel(a)}</td>
+                  <td>{statusBadge(a)}</td>
+                  <td>
+                    <div className="flex gap-1">
+                      <button onClick={() => setPreview(a)} className="btn-secondary btn-sm">查看</button>
+                      {['DRAFT','REJECTED'].includes(a.status) && <button onClick={() => onEdit(a)} className="btn-secondary btn-sm">编辑</button>}
+                      {a.status === 'APPROVED' && <button disabled={actionId === a.id} onClick={() => handlePublish(a)} className="btn-primary btn-sm">发布</button>}
+                      {['DRAFT','REJECTED'].includes(a.status) && <button onClick={() => handleDelete(a)} className="btn-danger btn-sm">删除</button>}
+                    </div>
+                  </td>
+                </tr>
               ))}
-            </div>
-            <label className="relative block lg:w-80">
-              <span className="pointer-events-none absolute inset-y-0 left-3 grid place-items-center text-stone-400">⌕</span>
-              <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索标题、地点或主办方" className="form-input pl-9" />
-            </label>
-          </div>
+            </tbody>
+          </table>
         </div>
-
-        {error && <div className="m-4 flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><span>{error}</span><button type="button" onClick={loadActivities} className="font-bold">重试</button></div>}
-
-        {loading ? (
-          <div className="grid min-h-64 place-items-center text-sm text-stone-400">正在加载活动…</div>
-        ) : activities.length === 0 ? (
-          <div className="grid min-h-80 place-items-center px-6 py-12 text-center">
-            <div><div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-indigo-50 text-2xl text-indigo-600">◇</div><h2 className="mt-4 font-bold text-stone-800">暂无符合条件的活动</h2><p className="mt-2 text-sm text-stone-400">可以调整筛选条件，或创建第一个活动方案。</p><button type="button" onClick={onCreate} className="mt-5 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white">创建活动</button></div>
-          </div>
-        ) : (
-          <>
-            <div className="hidden overflow-x-auto md:block">
-              <table className="w-full min-w-[920px] border-collapse text-left">
-                <thead><tr className="bg-stone-50 text-[11px] uppercase tracking-wider text-stone-400"><Th>活动信息</Th><Th>时间与地点</Th><Th>创建方式</Th><Th>状态</Th><Th>更新时间</Th><Th align="right">操作</Th></tr></thead>
-                <tbody>{activities.map((activity) => <ActivityRow key={activity.id} activity={activity} busy={actionId === activity.id} onPreview={setPreview} onEdit={onEdit} onCheckIn={onCheckIn} onRegistrations={onRegistrations} onDuplicate={handleDuplicate} onDelete={handleDelete} onPublish={handlePublish} />)}</tbody>
-              </table>
-            </div>
-            <div className="divide-y divide-stone-100 md:hidden">
-              {activities.map((activity) => <ActivityMobileCard key={activity.id} activity={activity} busy={actionId === activity.id} onPreview={setPreview} onEdit={onEdit} onCheckIn={onCheckIn} onRegistrations={onRegistrations} onDuplicate={handleDuplicate} onDelete={handleDelete} onPublish={handlePublish} />)}
-            </div>
-          </>
-        )}
-      </section>
+      )}
 
       {preview && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-stone-950/55 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-sm sm:p-4" onMouseDown={(event) => event.target === event.currentTarget && setPreview(null)}>
-          <div className="mx-auto my-2 max-w-3xl sm:my-10">
-            <div className="mb-3 flex justify-end"><button type="button" onClick={() => setPreview(null)} className="rounded-full bg-white px-4 py-2 text-sm font-bold text-stone-700 shadow">关闭预览</button></div>
-            <ActivityPreview activity={preview} />
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-start justify-center pt-10 pb-10 px-4 overflow-y-auto" onClick={e => { if (e.target === e.currentTarget) setPreview(null) }}>
+          <div className="bg-white rounded-lg max-w-2xl w-full shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200"><h2 className="font-bold">{preview.title || '详情'}</h2><button onClick={() => setPreview(null)} className="btn-secondary btn-sm">关闭</button></div>
+            <div className="p-4"><ActivityPreview activity={preview} /></div>
           </div>
         </div>
       )}
     </div>
   )
+}
+
+function statusBadge(a) {
+  const s = a.status
+  const labels = { DRAFT: '草稿', PENDING_APPROVAL: a.approvalStage === 'COLLEGE_LEADER' ? '待领导审批' : '待审核', APPROVED: '已通过', PUBLISHED: '已发布', OFFLINE: '已结束', REJECTED: '已驳回' }
+  const cls = { DRAFT: 'draft', PENDING_APPROVAL: 'pending', APPROVED: 'approved', PUBLISHED: 'published', OFFLINE: 'offline', REJECTED: 'rejected' }
+  return <span className={`status-tag ${cls[s] || 'draft'}`}>{labels[s] || s}</span>
+}
+function approvalLabel(a) {
+  if (!a.approvalStage || a.status === 'DRAFT' || a.status === 'PUBLISHED') return '-'
+  if (a.status === 'APPROVED') return '已通过 ✓'
+  if (a.status === 'REJECTED') return '已驳回 ✗'
+  return a.approvalStage === 'COLLEGE_LEADER' ? '审核老师 ✓ → 待领导' : '待审核老师'
+}
+function fmtDate(v) { if (!v) return '-'; const d = String(v).replace('T', ' '); return d.length > 16 ? d.slice(0, 16) : d }
+
+function downloadCsv(activities) {
+  const headers = ['ID', '标题', '分类', '地点', '主办方', '开始时间', '结束时间', '状态', '创建人', '创建时间']
+  const rows = activities.map(a => [
+    a.id, a.title || '', a.category || '', a.location || '', a.organizer || '',
+    fmtDate(a.startTime), fmtDate(a.endTime), a.status || '', a.creatorId || '', fmtDate(a.createdAt)
+  ])
+  const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))].join('\n')
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = `活动列表_${new Date().toISOString().slice(0, 10)}.csv`
+  a.click(); URL.revokeObjectURL(url)
 }
 
 function SummaryCard({ label, value, hint, tone }) {

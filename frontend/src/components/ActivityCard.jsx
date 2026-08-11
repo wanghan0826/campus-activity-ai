@@ -240,41 +240,31 @@ export default function ActivityCard({
   }
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_18px_60px_rgba(28,25,23,0.08)] sm:rounded-[28px]">
-      <div className="border-b border-stone-100 bg-gradient-to-r from-indigo-50 via-white to-emerald-50 px-4 py-5 sm:px-7">
-        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-bold text-indigo-700">
-                {activity.creationMode === 'MANUAL' ? '手动创建' : 'AI 方案卡片'}
-              </span>
-              {activity.id && <span className="text-xs text-stone-400">草稿 #{activity.id}</span>}
-            </div>
-            <h2 className="mt-3 text-xl font-bold text-stone-900 sm:text-2xl">完善活动方案</h2>
-            <p className="mt-1 text-sm text-stone-500">编辑完成后可先预览学生视角，再保存或提交审批</p>
-          </div>
-          <div className="grid w-full grid-cols-2 rounded-xl bg-stone-100 p-1 sm:inline-flex sm:w-auto">
-            <ViewButton active={view === 'edit'} onClick={() => setView('edit')}>编辑方案</ViewButton>
-            <ViewButton active={view === 'preview'} onClick={() => setView('preview')}>学生视角</ViewButton>
-          </div>
+    <div className="admin-card">
+      <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-bold text-gray-900">活动表单</h2>
+          {activity.id && <span className="text-xs text-gray-400">#{activity.id}</span>}
+          <span className={`status-tag ${activity.status === 'DRAFT' ? 'draft' : activity.status === 'PUBLISHED' ? 'published' : 'pending'}`}>
+            {activity.status === 'DRAFT' ? '草稿' : activity.status === 'PUBLISHED' ? '已发布' : activity.status === 'PENDING_APPROVAL' ? '审批中' : activity.status || '草稿'}
+          </span>
+        </div>
+        <div className="flex gap-2">
+          <button className={`btn-secondary btn-sm ${view === 'edit' ? 'bg-blue-50 border-blue-300' : ''}`} onClick={() => setView('edit')}>编辑</button>
+          <button className={`btn-secondary btn-sm ${view === 'preview' ? 'bg-blue-50 border-blue-300' : ''}`} onClick={() => setView('preview')}>预览</button>
         </div>
       </div>
 
       {view === 'preview' ? (
-        <div className="bg-stone-50 p-4 sm:p-7">
-          <div className="mb-4 rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
-            这是活动审批通过后，学生端看到的内容预览。
-          </div>
+        <div className="bg-gray-50 p-4 rounded">
+          <div className="text-xs text-gray-500 mb-3">学生端预览效果</div>
           <ActivityPreview activity={activity} />
         </div>
       ) : (
-        <div className="space-y-7 px-4 py-5 sm:space-y-8 sm:px-7 sm:py-6">
+        <div className="space-y-6">
           {FIELD_GROUPS.map((group) => (
             <section key={group.title}>
-              <div className="mb-4">
-                <h3 className="text-sm font-bold text-stone-900">{group.title}</h3>
-                <p className="mt-1 text-xs text-stone-400">{group.description}</p>
-              </div>
+              <h3 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-100">{group.title}</h3>
               <div className="grid gap-4 sm:grid-cols-2">
                 {group.fields.map((field) => (
                   <Field
@@ -298,176 +288,99 @@ export default function ActivityCard({
           ))}
 
           <section>
-            <SectionHeader title="活动流程" description="列出主要环节，学生预览和审批材料会同步更新">
-              <button type="button" onClick={() => updateField('schedule', [...(activity.schedule || []), { time: '', content: '' }])} className="small-action">
-                + 添加环节
-              </button>
-            </SectionHeader>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-100">活动流程</h3>
             <div className="space-y-2">
               {(activity.schedule || []).map((item, index) => (
-                <div key={index} className="grid gap-2 rounded-2xl bg-stone-50 p-3 sm:grid-cols-[140px_1fr_auto]">
-                  <input value={item.time || ''} onChange={(event) => updateSchedule(index, 'time', event.target.value)} placeholder="例如 14:00-14:20" className="form-input" />
-                  <input value={item.content || ''} onChange={(event) => updateSchedule(index, 'content', event.target.value)} placeholder="环节内容" className="form-input" />
-                  <button type="button" onClick={() => updateField('schedule', activity.schedule.filter((_, itemIndex) => itemIndex !== index))} className="min-h-10 rounded-xl px-3 text-xs text-stone-400 hover:bg-red-50 hover:text-red-600">删除</button>
+                <div key={index} className="flex gap-2">
+                  <input value={item.time || ''} onChange={(e) => updateSchedule(index, 'time', e.target.value)} placeholder="时间" className="form-input w-32" />
+                  <input value={item.content || ''} onChange={(e) => updateSchedule(index, 'content', e.target.value)} placeholder="环节内容" className="form-input flex-1" />
+                  <button onClick={() => updateField('schedule', activity.schedule.filter((_, i) => i !== index))} className="btn-danger btn-sm">删除</button>
                 </div>
               ))}
-              {(activity.schedule || []).length === 0 && <EmptyAction onClick={() => updateField('schedule', [{ time: '', content: '' }])}>添加活动流程</EmptyAction>}
+              <button onClick={() => updateField('schedule', [...(activity.schedule || []), { time: '', content: '' }])} className="btn-secondary btn-sm">+ 添加环节</button>
             </div>
           </section>
 
           <section>
-            <SectionHeader title="物料清单" description="用于审批和活动筹备，可逐项补充">
-              <button type="button" onClick={() => updateField('materials', [...(activity.materials || []), ''])} className="small-action">+ 添加物料</button>
-            </SectionHeader>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-100">物料清单</h3>
             <div className="space-y-2">
-              {(activity.materials || []).map((material, index) => (
-                <div key={index} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-                  <input value={material} onChange={(event) => {
-                    const next = [...activity.materials]
-                    next[index] = event.target.value
-                    updateField('materials', next)
-                  }} placeholder={`物料 ${index + 1}`} className="form-input flex-1" />
-                  <button type="button" onClick={() => updateField('materials', activity.materials.filter((_, itemIndex) => itemIndex !== index))} className="min-h-10 rounded-xl px-3 text-xs text-stone-400 hover:bg-red-50 hover:text-red-600">删除</button>
+              {(activity.materials || []).map((m, index) => (
+                <div key={index} className="flex gap-2">
+                  <input value={m} onChange={(e) => { const n = [...activity.materials]; n[index] = e.target.value; updateField('materials', n) }} placeholder={`物料 ${index + 1}`} className="form-input flex-1" />
+                  <button onClick={() => updateField('materials', activity.materials.filter((_, i) => i !== index))} className="btn-danger btn-sm">删除</button>
                 </div>
               ))}
-              {(activity.materials || []).length === 0 && <EmptyAction onClick={() => updateField('materials', [''])}>添加第一项物料</EmptyAction>}
+              <button onClick={() => updateField('materials', [...(activity.materials || []), ''])} className="btn-secondary btn-sm">+ 添加物料</button>
             </div>
           </section>
 
-          <section className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
-            <h3 className="text-sm font-bold text-amber-900">审批备注</h3>
-            <p className="mt-1 text-xs leading-5 text-amber-700">提交后将依次由学院审核老师、学院领导审批；两级通过后由发布人确认上架。</p>
-            <textarea value={approvalMessage} onChange={(event) => setApprovalMessage(event.target.value)} rows={3} maxLength={500} placeholder="给审批人的补充说明（选填）" className="form-input mt-3 resize-y bg-white" />
+          <section>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-100">审批备注</h3>
+            <textarea value={approvalMessage} onChange={(e) => setApprovalMessage(e.target.value)} rows={2} maxLength={500} placeholder="给审批人的补充说明（选填）" className="form-input" />
           </section>
         </div>
       )}
 
-      <div className="border-t border-stone-100 bg-stone-50 px-4 py-5 sm:px-7">
-        {error && <div role="alert" className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
-        {success && <div role="status" className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">✓ {success}</div>}
-        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <button type="button" onClick={handleSave} disabled={Boolean(submitting) || activity.status === 'PENDING_APPROVAL'} className="rounded-xl border border-stone-300 bg-white px-5 py-3 text-sm font-semibold text-stone-700 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-50">
-            {submitting === 'save' ? '正在保存…' : '保存草稿'}
-          </button>
-          <button type="button" onClick={() => setView(view === 'preview' ? 'edit' : 'preview')} className="rounded-xl border border-indigo-200 bg-indigo-50 px-5 py-3 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100">
-            {view === 'preview' ? '返回编辑' : '预览学生视角'}
-          </button>
-          <button type="button" onClick={handleSubmit} disabled={Boolean(submitting) || activity.status === 'PENDING_APPROVAL'} className="rounded-xl bg-stone-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-stone-300">
-            {submitting === 'submit' ? '正在提交…' : '提交审批'}
-          </button>
-        </div>
+      <div className="mt-6 pt-4 border-t border-gray-200 flex flex-col sm:flex-row gap-3 sm:justify-end">
+        {error && <div className="w-full rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
+        {success && <div className="w-full rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{success}</div>}
+        <button onClick={handleSave} disabled={Boolean(submitting)} className="btn-secondary">{submitting === 'save' ? '保存中…' : '保存草稿'}</button>
+        <button onClick={handleSubmit} disabled={Boolean(submitting) || activity.status === 'PENDING_APPROVAL'} className="btn-primary">{submitting === 'submit' ? '提交中…' : '提交审批'}</button>
       </div>
-    </article>
+    </div>
   )
 }
 
 function Field({ field, value, missing, onChange }) {
-  const classes = `form-input ${missing ? 'border-red-400 bg-red-50/40 focus:border-red-500 focus:ring-red-100' : ''}`
-  let control
+  const cls = `form-input ${missing ? 'border-red-400 bg-red-50' : ''}`
+  let ctrl
   if (field.type === 'textarea') {
-    control = <textarea rows={field.key === 'content' ? 7 : 3} value={value ?? ''} onChange={(event) => onChange(event.target.value)} placeholder={field.placeholder} className={`${classes} resize-y leading-6`} />
+    ctrl = <textarea rows={field.key === 'content' ? 5 : 2} value={value ?? ''} onChange={e => onChange(e.target.value)} placeholder={field.placeholder} className={cls} />
   } else if (field.type === 'category') {
-    control = (
-      <select value={value ?? ''} onChange={(event) => onChange(event.target.value || null)} className={classes}>
-        <option value="">请选择活动分类</option>
-        {Object.entries(CATEGORY_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-      </select>
-    )
+    ctrl = <select value={value ?? ''} onChange={e => onChange(e.target.value || null)} className={cls}>
+      <option value="">请选择</option>
+      {Object.entries(CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+    </select>
   } else if (field.type === 'registrationMode') {
-    control = (
-      <select value={String(value === true)} onChange={(event) => onChange(event.target.value === 'true')} className={classes}>
-        <option value="false">先到先得（报名后立即成功）</option>
-        <option value="true">需要审核（通过后占用名额）</option>
-      </select>
-    )
+    ctrl = <select value={String(value === true)} onChange={e => onChange(e.target.value === 'true')} className={cls}>
+      <option value="false">先到先得</option><option value="true">需要审核</option>
+    </select>
   } else if (field.type === 'boolean') {
-    control = (
-      <select value={String(value !== false)} onChange={(event) => onChange(event.target.value === 'true')} className={classes}>
-        <option value="true">{field.trueLabel || '是'}</option>
-        <option value="false">{field.falseLabel || '否'}</option>
-      </select>
-    )
+    ctrl = <select value={String(value !== false)} onChange={e => onChange(e.target.value === 'true')} className={cls}>
+      <option value="true">{field.trueLabel || '是'}</option><option value="false">{field.falseLabel || '否'}</option>
+    </select>
   } else if (field.type === 'recognition') {
-    control = (
-      <select value={value || 'NONE'} onChange={(event) => onChange(event.target.value)} className={classes}>
-        <option value="NONE">不做认定</option>
-        <option value="CREDIT">第二课堂学分</option>
-        <option value="VOLUNTEER">志愿服务时长</option>
-        <option value="BOTH">学分 + 志愿时长</option>
-      </select>
-    )
+    ctrl = <select value={value || 'NONE'} onChange={e => onChange(e.target.value)} className={cls}>
+      <option value="NONE">不做认定</option><option value="CREDIT">第二课堂学分</option><option value="VOLUNTEER">志愿时长</option><option value="BOTH">学分+时长</option>
+    </select>
   } else if (field.type === 'checkIn') {
-    control = (
-      <select value={value || 'QR'} onChange={(event) => onChange(event.target.value)} className={classes}>
-        <option value="QR">现场签到码</option>
-        <option value="MANUAL">人工签到</option>
-        <option value="NONE">无需签到</option>
-      </select>
-    )
+    ctrl = <select value={value || 'QR'} onChange={e => onChange(e.target.value)} className={cls}>
+      <option value="QR">签到码</option><option value="MANUAL">人工签到</option><option value="NONE">无需签到</option>
+    </select>
   } else {
-    control = (
-      <input
-        type={field.type || 'text'}
-        min={field.type === 'number' ? 0 : undefined}
-        step={field.step}
-        value={field.type === 'datetime-local' ? toInputDateTime(value) : (value ?? '')}
-        onChange={(event) => onChange(field.type === 'number' ? (event.target.value === '' ? null : Number(event.target.value)) : event.target.value)}
-        placeholder={field.placeholder}
-        className={classes}
-      />
-    )
+    ctrl = <input type={field.type || 'text'} min={field.type === 'number' ? 0 : undefined} step={field.step}
+      value={field.type === 'datetime-local' ? toInputDateTime(value) : (value ?? '')}
+      onChange={e => onChange(field.type === 'number' ? (e.target.value === '' ? null : Number(e.target.value)) : e.target.value)}
+      placeholder={field.placeholder} className={cls} />
   }
-  return (
-    <label className={field.wide ? 'sm:col-span-2' : ''}>
-      <span className="mb-1.5 flex items-center gap-1 text-xs font-semibold text-stone-600">
-        {field.label}{field.required && <span className="text-red-500">必填</span>}
-      </span>
-      {control}
-    </label>
-  )
-}
-
-function ViewButton({ active, onClick, children }) {
-  return <button type="button" onClick={onClick} className={`min-h-10 rounded-lg px-3 py-2 text-xs font-semibold transition ${active ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500 hover:text-stone-800'}`}>{children}</button>
+  return <label className={field.wide ? 'sm:col-span-2' : ''}>
+    <span className="block mb-1 text-xs font-medium text-gray-600">{field.label}{field.required && <span className="text-red-500 ml-0.5">*</span>}</span>
+    {ctrl}
+  </label>
 }
 
 function CoverImageEditor({ imageUrl, generating, onGenerate, onImageUrlChange }) {
   return (
-    <div className="mt-4 overflow-hidden rounded-2xl border border-stone-200 bg-stone-50 sm:col-span-2">
-      <div className="grid gap-0 sm:grid-cols-[220px_1fr]">
-        <div className="relative min-h-36 overflow-hidden bg-gradient-to-br from-indigo-950 via-violet-900 to-emerald-800">
-          {imageUrl ? (
-            <img src={resolveApiAssetUrl(imageUrl)} alt="活动封面预览" className="absolute inset-0 h-full w-full object-cover" />
-          ) : (
-            <div className="grid h-full min-h-36 place-items-center px-4 text-center text-xs leading-5 text-white/65">生成后的活动封面会显示在这里</div>
-          )}
+    <div className="mt-4 border border-gray-200 rounded overflow-hidden sm:col-span-2">
+      <div className="flex items-center gap-4 p-3 bg-gray-50">
+        <div className="w-20 h-14 bg-gray-200 rounded overflow-hidden shrink-0">
+          {imageUrl ? <img src={resolveApiAssetUrl(imageUrl)} alt="" className="w-full h-full object-cover" /> : <div className="grid h-full place-items-center text-xs text-gray-400">无封面</div>}
         </div>
-        <div className="p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div><h4 className="text-sm font-bold text-stone-900">活动封面</h4><p className="mt-1 text-xs leading-5 text-stone-500">根据上方画面描述生成，也可以使用已有图片。</p></div>
-            <button type="button" onClick={onGenerate} disabled={generating} className="w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-wait disabled:opacity-60 sm:w-auto">
-              {generating ? '正在生成封面…' : imageUrl ? '重新生成' : 'AI 生成封面'}
-            </button>
-          </div>
-          <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-            <input value={imageUrl || ''} onChange={(event) => onImageUrlChange(event.target.value)} placeholder="或粘贴已有图片地址" className="form-input flex-1 bg-white text-xs" />
-            {imageUrl && <button type="button" onClick={() => onImageUrlChange('')} className="rounded-xl px-3 text-xs font-semibold text-stone-400 hover:bg-red-50 hover:text-red-600">移除</button>}
-          </div>
+        <div className="flex-1">
+          <input value={imageUrl || ''} onChange={e => onImageUrlChange(e.target.value)} placeholder="图片URL" className="form-input text-xs" />
         </div>
+        <button onClick={onGenerate} disabled={generating} className="btn-secondary btn-sm shrink-0">{generating ? '生成中…' : 'AI 生成'}</button>
       </div>
     </div>
   )
-}
-
-function SectionHeader({ title, description, children }) {
-  return (
-    <div className="mb-4 flex flex-col items-start justify-between gap-3 sm:flex-row sm:gap-4">
-      <div><h3 className="text-sm font-bold text-stone-900">{title}</h3><p className="mt-1 text-xs text-stone-400">{description}</p></div>
-      {children}
-    </div>
-  )
-}
-
-function EmptyAction({ onClick, children }) {
-  return <button type="button" onClick={onClick} className="w-full rounded-2xl border border-dashed border-stone-300 px-4 py-5 text-sm text-stone-400 transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700">{children}</button>
 }

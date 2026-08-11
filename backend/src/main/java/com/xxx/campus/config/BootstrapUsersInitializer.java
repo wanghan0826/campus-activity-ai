@@ -39,6 +39,7 @@ public class BootstrapUsersInitializer implements ApplicationRunner {
         createIfMissing("reviewer", reviewerPassword, "review_teacher_001", "学院审核老师", "COLLEGE_REVIEWER");
         createIfMissing("leader", leaderPassword, "college_leader_001", "学院领导", "COLLEGE_LEADER");
         createIfMissing("student", studentPassword, "student_001", "学生用户", "STUDENT");
+        createIfMissing("admin", "admin123", "admin_001", "系统管理员", "ADMIN");
     }
 
     private void createIfMissing(String username, String password, String userId, String displayName, String role) {
