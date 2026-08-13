@@ -20,16 +20,16 @@ public class BootstrapUsersInitializer implements ApplicationRunner {
     private final UserAccountRepository userAccountRepository;
     private final PasswordEncoder passwordEncoder;
 
-    @Value("${auth.bootstrap.publisher-password:publisher123}")
+    @Value("${auth.bootstrap.publisher-password:123456}")
     private String publisherPassword;
 
-    @Value("${auth.bootstrap.reviewer-password:reviewer123}")
+    @Value("${auth.bootstrap.reviewer-password:123456}")
     private String reviewerPassword;
 
-    @Value("${auth.bootstrap.leader-password:leader123}")
+    @Value("${auth.bootstrap.leader-password:123456}")
     private String leaderPassword;
 
-    @Value("${auth.bootstrap.student-password:student123}")
+    @Value("${auth.bootstrap.student-password:123456}")
     private String studentPassword;
 
     @Override
@@ -39,7 +39,6 @@ public class BootstrapUsersInitializer implements ApplicationRunner {
         createIfMissing("reviewer", reviewerPassword, "review_teacher_001", "学院审核老师", "COLLEGE_REVIEWER");
         createIfMissing("leader", leaderPassword, "college_leader_001", "学院领导", "COLLEGE_LEADER");
         createIfMissing("student", studentPassword, "student_001", "学生用户", "STUDENT");
-        createIfMissing("admin", "admin123", "admin_001", "系统管理员", "ADMIN");
     }
 
     private void createIfMissing(String username, String password, String userId, String displayName, String role) {

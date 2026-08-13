@@ -31,6 +31,9 @@ public class WeComProperties {
     /** 是否启用日程同步 */
     private boolean calendarEnabled = true;
 
+    /** 是否启用已发布活动的企微群机器人通知 */
+    private boolean groupNotificationEnabled = true;
+
     /** 日程组织者的企业微信 userid */
     private String organizerUserid;
 

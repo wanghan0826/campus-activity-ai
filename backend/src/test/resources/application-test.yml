@@ -18,6 +18,7 @@ wecom:
   secret: test-secret
   notification-enabled: false
   calendar-enabled: false
+  group-notification-enabled: false
 
 ai:
   provider: http

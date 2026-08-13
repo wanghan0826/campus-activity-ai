@@ -99,6 +99,25 @@ export async function generateCoverImage(prompt) {
   return data
 }
 
+export async function getNotificationGroups() {
+  const { data } = await api.get('/notification-groups')
+  return data
+}
+
+export async function createNotificationGroup(name, webhookUrl) {
+  const { data } = await api.post('/notification-groups', { name, webhookUrl })
+  return data
+}
+
+export async function updateNotificationGroup(id, name, webhookUrl) {
+  const { data } = await api.put(`/notification-groups/${id}`, { name, webhookUrl })
+  return data
+}
+
+export async function disableNotificationGroup(id) {
+  await api.delete(`/notification-groups/${id}`)
+}
+
 export async function parseDocument(document) {
   const { data } = await api.post('/activities/parse', { document })
   return data
@@ -133,6 +152,11 @@ export async function submitActivity(id, message = '') {
 
 export async function publishActivity(id) {
   const { data } = await api.post(`/activities/${id}/publish`)
+  return data
+}
+
+export async function retryActivityNotification(id) {
+  const { data } = await api.post(`/activities/${id}/notifications/retry`)
   return data
 }
 

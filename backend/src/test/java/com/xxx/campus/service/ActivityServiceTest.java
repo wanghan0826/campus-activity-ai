@@ -2,6 +2,7 @@ package com.xxx.campus.service;
 
 import com.xxx.campus.model.Activity;
 import com.xxx.campus.model.ActivityParsedResult;
+import com.xxx.campus.model.NotificationGroup;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,10 +37,14 @@ class ActivityServiceTest {
     @Autowired
     private ApprovalRecordRepository approvalRecordRepository;
 
+    @Autowired
+    private NotificationGroupRepository notificationGroupRepository;
+
     @BeforeEach
     void cleanDatabase() {
         approvalRecordRepository.deleteAll();
         activityRepository.deleteAll();
+        notificationGroupRepository.deleteAll();
     }
 
     @Test
@@ -126,6 +131,60 @@ class ActivityServiceTest {
         assertThatThrownBy(() -> activityService.submitForApproval(created.getId(), null, CREATOR_ID, COLLEGE))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("第二课堂学分必须大于 0");
+    }
+
+    @Test
+    void shouldKeepSelectedGroupsSilentUntilApprovedActivityIsPublished() {
+        NotificationGroup group = notificationGroupRepository.save(NotificationGroup.builder()
+                .name("全院活动通知群")
+                .webhookUrl("https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=11111111-1111-1111-1111-111111111111")
+                .createdBy(CREATOR_ID)
+                .enabled(true)
+                .build());
+        ActivityParsedResult draft = completeResult();
+        draft.setNotificationGroupIds(List.of(group.getId()));
+
+        Activity created = activityService.createActivity(draft, CREATOR_ID);
+        assertThat(created.getNotificationTargets())
+                .extracting("groupName")
+                .containsExactly("全院活动通知群");
+        assertThat(created.getNotificationDeliveryStatus()).isEqualTo("NOT_SENT");
+
+        activityService.submitForApproval(created.getId(), null, CREATOR_ID, COLLEGE);
+        approvalService.approve(created.getId(), null, REVIEWER_ID, "COLLEGE_REVIEWER", COLLEGE);
+        Activity approved = approvalService.approve(created.getId(), null, LEADER_ID, "COLLEGE_LEADER", COLLEGE);
+        assertThat(approved.getNotificationDeliveryStatus()).isEqualTo("NOT_SENT");
+
+        Activity published = activityService.publishActivity(created.getId(), CREATOR_ID);
+        assertThat(published.getNotificationDeliveryStatus()).isEqualTo("PENDING");
+    }
+
+    @Test
+    void shouldOnlyRetryFailedNotificationForPublishedOwnedActivity() {
+        NotificationGroup group = notificationGroupRepository.save(NotificationGroup.builder()
+                .name("学院活动通知群")
+                .webhookUrl("https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=22222222-2222-2222-2222-222222222222")
+                .createdBy(CREATOR_ID)
+                .enabled(true)
+                .build());
+        ActivityParsedResult draft = completeResult();
+        draft.setNotificationGroupIds(List.of(group.getId()));
+        Activity created = activityService.createActivity(draft, CREATOR_ID);
+        activityService.submitForApproval(created.getId(), null, CREATOR_ID, COLLEGE);
+        approvalService.approve(created.getId(), null, REVIEWER_ID, "COLLEGE_REVIEWER", COLLEGE);
+        approvalService.approve(created.getId(), null, LEADER_ID, "COLLEGE_LEADER", COLLEGE);
+        Activity published = activityService.publishActivity(created.getId(), CREATOR_ID);
+        published.setNotificationDeliveryStatus("FAILED");
+        activityRepository.save(published);
+
+        Activity retrying = activityService.retryGroupNotification(created.getId(), CREATOR_ID);
+        assertThat(retrying.getId()).isEqualTo(created.getId());
+        assertThat(retrying.getNotificationTargets()).hasSize(1);
+
+        Activity notPublished = activityService.createActivity(draft, CREATOR_ID);
+        assertThatThrownBy(() -> activityService.retryGroupNotification(notPublished.getId(), CREATOR_ID))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("只有已发布活动");
     }
 
     @Test

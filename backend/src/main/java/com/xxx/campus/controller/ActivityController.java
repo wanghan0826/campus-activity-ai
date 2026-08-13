@@ -85,6 +85,13 @@ public class ActivityController {
         return ResponseEntity.ok(activityService.publishActivity(id, user.userId()));
     }
 
+    @PostMapping("/{id}/notifications/retry")
+    public ResponseEntity<Activity> retryGroupNotification(
+            @PathVariable Long id,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        return ResponseEntity.ok(activityService.retryGroupNotification(id, user.userId()));
+    }
+
     @PostMapping("/{id}/duplicate")
     public ResponseEntity<Activity> duplicateActivity(
             @PathVariable Long id,

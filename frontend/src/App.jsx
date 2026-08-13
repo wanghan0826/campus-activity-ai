@@ -8,8 +8,15 @@ import CheckInManagement from './pages/CheckInManagement.jsx'
 import CreateActivity from './pages/CreateActivity.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import RegistrationManagement from './pages/RegistrationManagement.jsx'
+import StudentActivities from './pages/StudentActivities.jsx'
 
-const ROLE_LABELS = { ADMIN: '管理员', PUBLISHER: '发布人', COLLEGE_REVIEWER: '审核老师', COLLEGE_LEADER: '学院领导', STUDENT: '学生' }
+const ROLE_LABELS = { PUBLISHER: '发布人', COLLEGE_REVIEWER: '审核老师', COLLEGE_LEADER: '学院领导', STUDENT: '学生' }
+
+function homePageForRole(role) {
+  if (role === 'STUDENT') return 'studentActivities'
+  if (role === 'PUBLISHER') return 'square'
+  return 'approvals'
+}
 
 export default function App() {
   const [page, setPage] = useState('square')
@@ -20,9 +27,9 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true)
   const [showAiSettings, setShowAiSettings] = useState(false)
 
-  const isAdmin = user?.role === 'ADMIN'
-  const isPublisher = user?.role === 'PUBLISHER' || isAdmin
-  const isReviewer = user?.role === 'COLLEGE_REVIEWER' || user?.role === 'COLLEGE_LEADER' || isAdmin
+  const isPublisher = user?.role === 'PUBLISHER'
+  const isStudent = user?.role === 'STUDENT'
+  const isReviewer = user?.role === 'COLLEGE_REVIEWER' || user?.role === 'COLLEGE_LEADER'
 
   useEffect(() => {
     let active = true
@@ -30,7 +37,10 @@ export default function App() {
       if (!hasStoredAuthToken()) { setAuthLoading(false); return }
       try {
         const u = await getCurrentUser()
-        if (active) setUser(u)
+        if (active) {
+          setUser(u)
+          setPage(homePageForRole(u.role))
+        }
       } catch { if (active) setUser(null) }
       finally { if (active) setAuthLoading(false) }
     }
@@ -41,7 +51,7 @@ export default function App() {
 
   const navigate = (p) => { setEditingActivity(null); setCheckInActivity(null); setRegistrationActivity(null); setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }) }
 
-  const handleLogin = (u) => { setUser(u); setPage('square') }
+  const handleLogin = (u) => { setUser(u); setPage(homePageForRole(u.role)) }
   const handleLogout = async () => { await logout(); setUser(null) }
 
   if (authLoading) return <div className="grid min-h-screen place-items-center text-gray-400 text-sm">正在加载…</div>
@@ -53,9 +63,11 @@ export default function App() {
         <div className="flex items-center gap-4">
           <span className="text-lg font-bold text-blue-600 tracking-tight">校园活动平台</span>
           <nav className="hidden sm:flex items-center gap-1 ml-4">
-            <NavBtn active={page === 'square'} onClick={() => navigate('square')}>活动广场</NavBtn>
-            <NavBtn active={page === 'create'} onClick={() => { setEditingActivity(null); navigate('create') }}>发布活动</NavBtn>
-            {isAdmin && <NavBtn active={['manage', 'checkIn', 'registration'].includes(page)} onClick={() => navigate('manage')}>活动管理</NavBtn>}
+            {isPublisher && <NavBtn active={page === 'square'} onClick={() => navigate('square')}>活动广场</NavBtn>}
+            {isPublisher && <NavBtn active={page === 'create'} onClick={() => { setEditingActivity(null); navigate('create') }}>发布活动</NavBtn>}
+            {isPublisher && <NavBtn active={['manage', 'checkIn', 'registration'].includes(page)} onClick={() => navigate('manage')}>活动管理</NavBtn>}
+            {isStudent && <NavBtn active={page === 'studentActivities'} onClick={() => navigate('studentActivities')}>活动广场</NavBtn>}
+            {isStudent && <NavBtn active={page === 'studentRegistrations'} onClick={() => navigate('studentRegistrations')}>我的报名</NavBtn>}
             {isReviewer && <NavBtn active={page === 'approvals'} onClick={() => navigate('approvals')}>审批工作台</NavBtn>}
           </nav>
         </div>
@@ -68,21 +80,23 @@ export default function App() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-        {page === 'square' ? (
+        {isStudent ? (
+          <StudentActivities section={page === 'studentRegistrations' ? 'registrations' : 'activities'} onNavigate={(section) => navigate(section === 'registrations' ? 'studentRegistrations' : 'studentActivities')} />
+        ) : page === 'square' && isPublisher ? (
           <ActivitySquare user={user} onEdit={isPublisher ? (a) => { setEditingActivity(a); navigate('create') } : undefined} />
-        ) : page === 'create' ? (
+        ) : page === 'create' && isPublisher ? (
           <CreateActivity editingActivity={editingActivity} onActivityChanged={(a, type) => { if (type === 'submitted') navigate('manage') }} onCancelEdit={() => navigate('manage')} />
-        ) : page === 'registration' && registrationActivity ? (
+        ) : page === 'registration' && isPublisher && registrationActivity ? (
           <RegistrationManagement activity={registrationActivity} onBack={() => navigate('manage')} />
-        ) : page === 'checkIn' && checkInActivity ? (
+        ) : page === 'checkIn' && isPublisher && checkInActivity ? (
           <CheckInManagement activity={checkInActivity} onBack={() => navigate('manage')} />
-        ) : page === 'manage' && isAdmin ? (
+        ) : page === 'manage' && isPublisher ? (
           <ActivityManagement
             user={user}
             onCreate={() => { setEditingActivity(null); navigate('create') }}
-            onEdit={(a) => { setEditingActivity(a); navigate('create') }}
-            onCheckIn={(a) => { setCheckInActivity(a); navigate('checkIn') }}
-            onRegistrations={(a) => { setRegistrationActivity(a); navigate('registration') }}
+            onEdit={(a) => { navigate('create'); setEditingActivity(a) }}
+            onCheckIn={(a) => { navigate('checkIn'); setCheckInActivity(a) }}
+            onRegistrations={(a) => { navigate('registration'); setRegistrationActivity(a) }}
           />
         ) : (
           <ApprovalWorkbench identity={user} />
@@ -90,12 +104,18 @@ export default function App() {
       </main>
 
       {/* Mobile nav */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 sm:hidden bg-white border-t border-gray-200 grid grid-cols-4 gap-1 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-        <MobNav active={page === 'square'} onClick={() => navigate('square')} icon="◇">广场</MobNav>
-        <MobNav active={page === 'create'} onClick={() => { setEditingActivity(null); navigate('create') }} icon="＋">发布</MobNav>
-        <MobNav active={['manage','checkIn','registration'].includes(page)} onClick={() => navigate('manage')} icon="☰">管理</MobNav>
-        <MobNav active={page === 'approvals'} onClick={() => navigate('approvals')} icon="✓">审批</MobNav>
-      </nav>
+      {isPublisher ? (
+        <nav className="fixed inset-x-0 bottom-0 z-40 sm:hidden bg-white border-t border-gray-200 grid grid-cols-3 gap-1 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+          <MobNav active={page === 'square'} onClick={() => navigate('square')} icon="◇">广场</MobNav>
+          <MobNav active={page === 'create'} onClick={() => { setEditingActivity(null); navigate('create') }} icon="＋">发布</MobNav>
+          <MobNav active={['manage','checkIn','registration'].includes(page)} onClick={() => navigate('manage')} icon="☰">管理</MobNav>
+        </nav>
+      ) : isStudent ? (
+        <nav className="fixed inset-x-0 bottom-0 z-40 sm:hidden bg-white border-t border-gray-200 grid grid-cols-2 gap-1 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+          <MobNav active={page === 'studentActivities'} onClick={() => navigate('studentActivities')} icon="◇">广场</MobNav>
+          <MobNav active={page === 'studentRegistrations'} onClick={() => navigate('studentRegistrations')} icon="◎">报名</MobNav>
+        </nav>
+      ) : null}
 
       {showAiSettings && <AiSettingsDialog onClose={() => setShowAiSettings(false)} />}
     </div>

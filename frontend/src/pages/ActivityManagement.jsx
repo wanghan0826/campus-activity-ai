@@ -6,6 +6,7 @@ import {
   getActivityStats,
   getApiErrorMessage,
   publishActivity,
+  retryActivityNotification,
 } from '../api/activity.js'
 import ActivityPreview from '../components/ActivityPreview.jsx'
 
@@ -91,7 +92,9 @@ export default function ActivityManagement({ onCreate, onEdit, onCheckIn, onRegi
   }
 
   const handlePublish = async (activity) => {
-    if (!window.confirm(`“${activity.title || '未命名活动'}”已完成两级审批，确定发布到学生端吗？`)) return
+    const targetNames = (activity.notificationTargets || []).map((target) => target.groupName).filter(Boolean)
+    const notice = targetNames.length ? `\n发布后将通知：${targetNames.join('、')}` : ''
+    if (!window.confirm(`“${activity.title || '未命名活动'}”已完成两级审批，确定发布到学生端吗？${notice}`)) return
     setActionId(activity.id)
     setError('')
     try {
@@ -99,6 +102,20 @@ export default function ActivityManagement({ onCreate, onEdit, onCheckIn, onRegi
       await loadActivities()
     } catch (requestError) {
       setError(getApiErrorMessage(requestError, '活动发布失败'))
+    } finally {
+      setActionId(null)
+    }
+  }
+
+  const handleRetryNotification = async (activity) => {
+    if (!window.confirm(`确定重新向“${activity.title || '未命名活动'}”选择的群聊发送通知吗？`)) return
+    setActionId(activity.id)
+    setError('')
+    try {
+      await retryActivityNotification(activity.id)
+      await loadActivities()
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, '群聊通知重试失败'))
     } finally {
       setActionId(null)
     }
@@ -143,7 +160,14 @@ export default function ActivityManagement({ onCreate, onEdit, onCheckIn, onRegi
             <tbody>
               {activities.map(a => (
                 <tr key={a.id}>
-                  <td className="font-medium text-gray-900 cursor-pointer hover:text-blue-600" onClick={() => setPreview(a)}>{a.title || '未命名'}</td>
+                  <td className="font-medium text-gray-900 cursor-pointer hover:text-blue-600" onClick={() => setPreview(a)}>
+                    <div>{a.title || '未命名'}</div>
+                    {a.notificationTargets?.length > 0 && (
+                      <div className={`mt-1 text-xs font-normal ${notificationTone(a.notificationDeliveryStatus)}`} title={a.notificationDeliverySummary || ''}>
+                        {notificationLabel(a)}
+                      </div>
+                    )}
+                  </td>
                   <td>{CATEGORY_LABELS[a.category] || '-'}</td>
                   <td className="text-sm">{fmtDate(a.startTime)}</td>
                   <td className="text-sm max-w-32 truncate">{a.location || '-'}</td>
@@ -154,6 +178,7 @@ export default function ActivityManagement({ onCreate, onEdit, onCheckIn, onRegi
                       <button onClick={() => setPreview(a)} className="btn-secondary btn-sm">查看</button>
                       {['DRAFT','REJECTED'].includes(a.status) && <button onClick={() => onEdit(a)} className="btn-secondary btn-sm">编辑</button>}
                       {a.status === 'APPROVED' && <button disabled={actionId === a.id} onClick={() => handlePublish(a)} className="btn-primary btn-sm">发布</button>}
+                      {a.status === 'PUBLISHED' && ['FAILED','PARTIAL'].includes(a.notificationDeliveryStatus) && <button disabled={actionId === a.id} onClick={() => handleRetryNotification(a)} className="btn-secondary btn-sm">重试通知</button>}
                       {['DRAFT','REJECTED'].includes(a.status) && <button onClick={() => handleDelete(a)} className="btn-danger btn-sm">删除</button>}
                     </div>
                   </td>
@@ -189,6 +214,24 @@ function approvalLabel(a) {
   return a.approvalStage === 'COLLEGE_LEADER' ? '审核老师 ✓ → 待领导' : '待审核老师'
 }
 function fmtDate(v) { if (!v) return '-'; const d = String(v).replace('T', ' '); return d.length > 16 ? d.slice(0, 16) : d }
+
+function notificationLabel(activity) {
+  const count = activity.notificationTargets?.length || 0
+  const labels = {
+    NOT_SENT: `待发布后通知 ${count} 个群`,
+    PENDING: `正在通知 ${count} 个群`,
+    SENT: activity.notificationDeliverySummary || `已通知 ${count} 个群`,
+    PARTIAL: activity.notificationDeliverySummary || '部分群聊发送失败',
+    FAILED: activity.notificationDeliverySummary || '群聊通知发送失败',
+  }
+  return labels[activity.notificationDeliveryStatus] || `通知 ${count} 个群`
+}
+
+function notificationTone(status) {
+  if (status === 'SENT') return 'text-emerald-600'
+  if (['FAILED', 'PARTIAL'].includes(status)) return 'text-red-600'
+  return 'text-blue-500'
+}
 
 function downloadCsv(activities) {
   const headers = ['ID', '标题', '分类', '地点', '主办方', '开始时间', '结束时间', '状态', '创建人', '创建时间']

@@ -118,6 +118,21 @@ public class Activity {
     @Builder.Default
     private List<String> materials = new ArrayList<>();
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "activity_notification_target", joinColumns = @JoinColumn(name = "activity_id"))
+    @OrderColumn(name = "sort_order")
+    @Builder.Default
+    private List<ActivityNotificationTarget> notificationTargets = new ArrayList<>();
+
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private String notificationDeliveryStatus = "NOT_SENT";
+
+    @Column(length = 200)
+    private String notificationDeliverySummary;
+
+    private LocalDateTime notificationSentAt;
+
     // ── 审批相关（系统匹配）──
     @Column(length = 100)
     private String reviewDept;

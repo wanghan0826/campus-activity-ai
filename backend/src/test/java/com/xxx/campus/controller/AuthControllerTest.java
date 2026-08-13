@@ -32,7 +32,7 @@ class AuthControllerTest {
     @Test
     void shouldLoginAndEnforceRolePermissions() throws Exception {
         assertThat(userAccountRepository.findByUsernameIgnoreCase("student")).isPresent();
-        String token = login("student", "student123", "STUDENT");
+        String token = login("student", "123456", "STUDENT");
 
         mockMvc.perform(get("/api/student/activities")
                         .header("Authorization", "Bearer " + token))
@@ -54,7 +54,7 @@ class AuthControllerTest {
                         .content("{\"username\":\"publisher\",\"password\":\"wrong\"}"))
                 .andExpect(status().isUnauthorized());
 
-        String token = login("publisher", "publisher123", "PUBLISHER");
+        String token = login("publisher", "123456", "PUBLISHER");
         mockMvc.perform(get("/api/activities")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());

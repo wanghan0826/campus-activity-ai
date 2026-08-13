@@ -81,6 +81,9 @@ CREATE TABLE IF NOT EXISTS activity (
     leader_reviewed_at  DATETIME   COMMENT '学院领导处理时间',
     approved_at      DATETIME      COMMENT '两级审批完成时间',
     calendar_event_id VARCHAR(100) COMMENT '企业微信日程ID',
+    notification_delivery_status VARCHAR(20) NOT NULL DEFAULT 'NOT_SENT' COMMENT 'NOT_SENT/PENDING/SENT/PARTIAL/FAILED',
+    notification_delivery_summary VARCHAR(200) COMMENT '群聊通知发送结果',
+    notification_sent_at DATETIME COMMENT '群聊通知发送时间',
     status           VARCHAR(20)   NOT NULL DEFAULT 'DRAFT' COMMENT 'DRAFT/PENDING_APPROVAL/APPROVED/PUBLISHED/OFFLINE/REJECTED',
     creator_id       VARCHAR(100)  NOT NULL COMMENT '创建人userid',
     created_at       DATETIME      DEFAULT CURRENT_TIMESTAMP,
@@ -108,6 +111,27 @@ CREATE TABLE IF NOT EXISTS activity_material (
     PRIMARY KEY (activity_id, sort_order),
     CONSTRAINT fk_material_activity FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS notification_group (
+    id          BIGINT PRIMARY KEY AUTO_INCREMENT,
+    name        VARCHAR(100) NOT NULL,
+    webhook_url VARCHAR(500) NOT NULL,
+    enabled     BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_by  VARCHAR(100) NOT NULL,
+    created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_notification_group_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='企微群聊通知配置';
+
+CREATE TABLE IF NOT EXISTS activity_notification_target (
+    activity_id BIGINT       NOT NULL,
+    sort_order  INT          NOT NULL,
+    group_id    BIGINT       NOT NULL,
+    group_name  VARCHAR(100) NOT NULL,
+    PRIMARY KEY (activity_id, sort_order),
+    INDEX idx_notification_target_group (group_id),
+    CONSTRAINT fk_notification_target_activity FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='活动发布通知范围快照';
 
 CREATE TABLE IF NOT EXISTS activity_approval_record (
     id               BIGINT PRIMARY KEY AUTO_INCREMENT,

@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -41,6 +42,8 @@ public class ActivityService {
     private final ApprovalService approvalService;
     private final WeComMessageService weComMessageService;
     private final WeComCalendarService weComCalendarService;
+    private final NotificationGroupRepository notificationGroupRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public Map<String, Object> parseDocument(String document, String creatorId) {
         ActivityParsedResult result = aiService.parseActivity(document);
@@ -127,6 +130,10 @@ public class ActivityService {
         }
         activity.setStatus("PUBLISHED");
         activity.setPublishTime(LocalDateTime.now());
+        if (activity.getNotificationTargets() != null && !activity.getNotificationTargets().isEmpty()) {
+            activity.setNotificationDeliveryStatus("PENDING");
+            activity.setNotificationDeliverySummary("等待发送");
+        }
         Activity saved = activityRepository.save(activity);
 
         weComMessageService.notifyPublished(saved);
@@ -135,6 +142,28 @@ public class ActivityService {
             saved.setCalendarEventId(scheduleId);
             saved = activityRepository.save(saved);
         }
+        eventPublisher.publishEvent(new ActivityPublishedEvent(saved.getId()));
+        return saved;
+    }
+
+    /** 群聊通知失败后由发布人手动重试，已发送成功的活动不允许重复发送。 */
+    @Transactional
+    public Activity retryGroupNotification(Long id, String creatorId) {
+        Activity activity = getOwnedActivity(id, creatorId);
+        if (!"PUBLISHED".equals(activity.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "只有已发布活动可以重试群聊通知");
+        }
+        if (activity.getNotificationTargets() == null || activity.getNotificationTargets().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "该活动没有选择通知范围");
+        }
+        if (!Set.of("FAILED", "PARTIAL").contains(activity.getNotificationDeliveryStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "当前通知状态无需重试");
+        }
+        activity.setNotificationDeliveryStatus("PENDING");
+        activity.setNotificationDeliverySummary("正在重新发送");
+        activity.setNotificationSentAt(null);
+        Activity saved = activityRepository.save(activity);
+        eventPublisher.publishEvent(new ActivityPublishedEvent(saved.getId()));
         return saved;
     }
 
@@ -174,6 +203,7 @@ public class ActivityService {
         copy.setPromoApproved(source.getPromoApproved());
         copy.setSchedule(new ArrayList<>(source.getSchedule()));
         copy.setMaterials(new ArrayList<>(source.getMaterials()));
+        copy.setNotificationTargets(new ArrayList<>(source.getNotificationTargets()));
         return activityRepository.save(copy);
     }
 
@@ -232,9 +262,28 @@ public class ActivityService {
         activity.setMaterials(result.getMaterials() == null
                 ? new ArrayList<>()
                 : new ArrayList<>(result.getMaterials().stream().map(this::trimToNull).filter(value -> value != null).toList()));
+        activity.setNotificationTargets(resolveNotificationTargets(result.getNotificationGroupIds()));
+        activity.setNotificationDeliveryStatus("NOT_SENT");
+        activity.setNotificationDeliverySummary(null);
+        activity.setNotificationSentAt(null);
 
         validateTimeOrder(activity, false);
         validateRecognitionSettings(activity, false);
+    }
+
+    private List<com.xxx.campus.model.ActivityNotificationTarget> resolveNotificationTargets(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return new ArrayList<>();
+        List<Long> uniqueIds = ids.stream().filter(java.util.Objects::nonNull).distinct().limit(20).toList();
+        Map<Long, com.xxx.campus.model.NotificationGroup> groups = notificationGroupRepository.findAllById(uniqueIds)
+                .stream()
+                .filter(group -> Boolean.TRUE.equals(group.getEnabled()))
+                .collect(java.util.stream.Collectors.toMap(com.xxx.campus.model.NotificationGroup::getId, group -> group));
+        if (groups.size() != uniqueIds.size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "通知范围中包含已停用或不存在的群聊");
+        }
+        return uniqueIds.stream()
+                .map(id -> new com.xxx.campus.model.ActivityNotificationTarget(id, groups.get(id).getName()))
+                .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
     }
 
     private List<ActivityScheduleItem> toSchedule(List<ActivityParsedResult.ScheduleItem> items) {

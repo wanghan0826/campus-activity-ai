@@ -47,6 +47,7 @@ public class ActivityParsedResult {
     // ── AI 建议（非必填，给教师参考）──
     private List<ScheduleItem> schedule;    // 活动流程建议
     private List<String> materials;         // 物料清单建议
+    private List<Long> notificationGroupIds; // 发布后需要通知的企微群
 
     @Data
     public static class ScheduleItem {

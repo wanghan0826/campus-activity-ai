@@ -8,6 +8,7 @@ application-local.yml
 .idea/
 *.iml
 .vscode/
+.run/
 
 # Maven
 target/

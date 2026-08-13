@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
+  createNotificationGroup,
   createActivity,
   generateCoverImage,
   getApiErrorMessage,
+  getNotificationGroups,
   resolveApiAssetUrl,
   submitActivity,
   updateActivity,
@@ -75,6 +77,7 @@ const EMPTY_RESULT = {
   maxParticipants: '', budget: '', promoApproved: null, schedule: [], materials: [],
   registrationRequired: true, registrationApprovalRequired: false, recognitionType: 'NONE',
   secondClassCredits: '', volunteerHours: '', checkInMode: 'QR', participationRequirements: '',
+  notificationTargets: [],
 }
 
 const REQUIRED_FIELDS = ['title', 'category', 'location', 'content', 'startTime', 'endTime']
@@ -124,6 +127,9 @@ function toPayload(activity) {
     promoApproved: activity.promoApproved,
     schedule: (activity.schedule || []).filter((item) => item.time || item.content),
     materials: (activity.materials || []).map((item) => item.trim()).filter(Boolean),
+    notificationGroupIds: (activity.notificationTargets || [])
+      .map((target) => Number(target.groupId ?? target.id))
+      .filter((id) => Number.isFinite(id)),
   }
 }
 
@@ -139,6 +145,8 @@ export default function ActivityCard({
   const [approvalMessage, setApprovalMessage] = useState(parsedResult.approvalMessage || '')
   const [submitting, setSubmitting] = useState('')
   const [generatingImage, setGeneratingImage] = useState(false)
+  const [notificationGroups, setNotificationGroups] = useState([])
+  const [showGroupPicker, setShowGroupPicker] = useState(false)
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
 
@@ -154,6 +162,14 @@ export default function ActivityCard({
     setError('')
     setView('edit')
   }, [parsedResult, sourceDocument, creationMode])
+
+  useEffect(() => {
+    let active = true
+    getNotificationGroups()
+      .then((groups) => { if (active) setNotificationGroups(groups || []) })
+      .catch(() => { if (active) setNotificationGroups([]) })
+    return () => { active = false }
+  }, [])
 
   const activeMissingFields = useMemo(() => {
     const required = new Set([...missingFields, ...REQUIRED_FIELDS])
@@ -287,6 +303,30 @@ export default function ActivityCard({
             </section>
           ))}
 
+          <section className="rounded border border-blue-100 bg-blue-50/60 p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-blue-100 pb-3">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900">发布通知</h3>
+                <p className="mt-1 text-xs text-gray-500">选择活动正式发布后需要通知的企微群</p>
+              </div>
+              <button type="button" onClick={() => setShowGroupPicker(true)} className="btn-secondary btn-sm">
+                {activity.notificationTargets?.length ? '重新选择' : '选择群聊'}
+              </button>
+            </div>
+            {activity.notificationTargets?.length ? (
+              <div className="flex flex-wrap gap-2">
+                {activity.notificationTargets.map((target) => (
+                  <span key={target.groupId ?? target.id} className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-medium text-blue-700">
+                    <span className="text-emerald-500">●</span>{target.groupName ?? target.name}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded border border-dashed border-blue-200 bg-white px-4 py-3 text-sm text-gray-400">暂不发送群聊通知</div>
+            )}
+            <p className="mt-3 text-xs text-gray-500">草稿和审批阶段不会发送，审批通过并正式发布后自动通知。</p>
+          </section>
+
           <section>
             <h3 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-100">活动流程</h3>
             <div className="space-y-2">
@@ -326,6 +366,137 @@ export default function ActivityCard({
         {success && <div className="w-full rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{success}</div>}
         <button onClick={handleSave} disabled={Boolean(submitting)} className="btn-secondary">{submitting === 'save' ? '保存中…' : '保存草稿'}</button>
         <button onClick={handleSubmit} disabled={Boolean(submitting) || activity.status === 'PENDING_APPROVAL'} className="btn-primary">{submitting === 'submit' ? '提交中…' : '提交审批'}</button>
+      </div>
+      {showGroupPicker && (
+        <NotificationGroupPicker
+          groups={notificationGroups}
+          selectedTargets={activity.notificationTargets || []}
+          onClose={() => setShowGroupPicker(false)}
+          onGroupsChange={setNotificationGroups}
+          onConfirm={(targets) => {
+            updateField('notificationTargets', targets)
+            setShowGroupPicker(false)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function NotificationGroupPicker({ groups, selectedTargets, onClose, onGroupsChange, onConfirm }) {
+  const [availableGroups, setAvailableGroups] = useState(groups.filter((group) => group.enabled))
+  const [selectedIds, setSelectedIds] = useState(() => new Set(selectedTargets.map((target) => Number(target.groupId ?? target.id))))
+  const [keyword, setKeyword] = useState('')
+  const [showAdd, setShowAdd] = useState(false)
+  const [name, setName] = useState('')
+  const [webhookUrl, setWebhookUrl] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState('')
+
+  const filteredGroups = useMemo(() => {
+    const normalized = keyword.trim().toLowerCase()
+    if (!normalized) return availableGroups
+    return availableGroups.filter((group) => group.name.toLowerCase().includes(normalized))
+  }, [availableGroups, keyword])
+
+  const toggle = (id) => {
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const addGroup = async () => {
+    if (!name.trim() || !webhookUrl.trim()) {
+      setFormError('请填写群聊名称和机器人 Webhook 地址')
+      return
+    }
+    setSaving(true)
+    setFormError('')
+    try {
+      const created = await createNotificationGroup(name.trim(), webhookUrl.trim())
+      const nextGroups = [...availableGroups, created].sort((left, right) => left.name.localeCompare(right.name, 'zh-CN'))
+      setAvailableGroups(nextGroups)
+      onGroupsChange((current) => [...current.filter((group) => group.id !== created.id), created])
+      setSelectedIds((current) => new Set([...current, created.id]))
+      setName('')
+      setWebhookUrl('')
+      setShowAdd(false)
+    } catch (requestError) {
+      setFormError(getApiErrorMessage(requestError, '群聊接入失败，请检查 Webhook 地址'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const confirm = () => {
+    onConfirm(availableGroups
+      .filter((group) => selectedIds.has(group.id))
+      .map((group) => ({ groupId: group.id, groupName: group.name })))
+  }
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-gray-950/50 p-0 sm:items-center sm:p-4" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <div className="max-h-[92vh] w-full overflow-y-auto rounded-t-xl bg-white shadow-2xl sm:max-w-xl sm:rounded-lg">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-5 py-4">
+          <div><h3 className="font-bold text-gray-900">选择通知群聊</h3><p className="mt-1 text-xs text-gray-400">已选择 {selectedIds.size} 个</p></div>
+          <button type="button" onClick={onClose} className="btn-secondary btn-sm">关闭</button>
+        </div>
+
+        <div className="space-y-3 p-5">
+          {availableGroups.length > 0 && (
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索群聊" className="form-input flex-1" autoFocus />
+              <div className="grid grid-cols-2 gap-2 sm:flex">
+                <button type="button" onClick={() => setSelectedIds(new Set(availableGroups.map((group) => group.id)))} className="btn-secondary btn-sm">全选</button>
+                <button type="button" onClick={() => setSelectedIds(new Set())} className="btn-secondary btn-sm">清空</button>
+              </div>
+            </div>
+          )}
+
+          {filteredGroups.map((group) => (
+            <label key={group.id} className={`flex cursor-pointer items-center gap-3 rounded border p-4 transition ${selectedIds.has(group.id) ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:border-blue-300'}`}>
+              <input type="checkbox" checked={selectedIds.has(group.id)} onChange={() => toggle(group.id)} className="h-5 w-5 rounded border-gray-300 text-blue-600" />
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded bg-emerald-100 text-sm font-bold text-emerald-700">群</span>
+              <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-gray-800">{group.name}</span><span className="mt-0.5 block text-xs text-gray-400">企微群机器人</span></span>
+              {selectedIds.has(group.id) && <span className="text-xs font-semibold text-blue-600">已选</span>}
+            </label>
+          ))}
+
+          {!availableGroups.length && !showAdd && (
+            <div className="rounded border border-dashed border-gray-300 px-5 py-8 text-center text-sm text-gray-400">还没有接入通知群聊</div>
+          )}
+
+          {availableGroups.length > 0 && !filteredGroups.length && (
+            <div className="rounded border border-dashed border-gray-300 px-5 py-8 text-center text-sm text-gray-400">没有找到匹配的群聊</div>
+          )}
+
+          {showAdd ? (
+            <div className="rounded border border-emerald-200 bg-emerald-50 p-4">
+              <div className="text-sm font-semibold text-gray-800">接入一个群聊</div>
+              <input value={name} onChange={(event) => setName(event.target.value)} maxLength={100} placeholder="群聊名称" className="form-input mt-3 bg-white" />
+              <input type="password" value={webhookUrl} onChange={(event) => setWebhookUrl(event.target.value)} placeholder="群机器人 Webhook 地址" className="form-input mt-2 bg-white" />
+              <p className="mt-2 text-xs leading-5 text-gray-500">在目标企微信群的群设置中添加机器人，然后复制 Webhook 地址。</p>
+              {formError && <div className="mt-2 text-xs font-medium text-red-600">{formError}</div>}
+              <div className="mt-3 flex justify-end gap-2">
+                <button type="button" onClick={() => { setShowAdd(false); setFormError('') }} className="btn-secondary btn-sm">取消</button>
+                <button type="button" disabled={saving} onClick={addGroup} className="btn-primary btn-sm">{saving ? '正在接入…' : '保存并选择'}</button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-3 rounded bg-gray-50 px-4 py-3">
+              <span className="text-xs text-gray-500">通知范围通常只需配置一次</span>
+              <button type="button" onClick={() => setShowAdd(true)} className="text-xs font-semibold text-emerald-700 hover:text-emerald-800">添加通知范围</button>
+            </div>
+          )}
+        </div>
+
+        <div className="sticky bottom-0 grid grid-cols-2 gap-3 border-t border-gray-200 bg-white p-4">
+          <button type="button" onClick={onClose} className="btn-secondary">取消</button>
+          <button type="button" onClick={confirm} className="btn-primary">确定选择</button>
+        </div>
       </div>
     </div>
   )

@@ -23,6 +23,7 @@
 - 学校认证预留：用户表包含认证来源与学校侧唯一身份字段，后续可映射学校统一身份认证结果
 - 活动管理：状态统计、搜索筛选、详情预览、继续编辑、复制和删除草稿
 - 两级审批：发布人提交后依次流转至学院审核老师、学院领导，终审通过后由发布人确认上架
+- 群聊通知范围：创建活动时可多选已接入的企微信群，草稿和审批阶段保持静默，正式发布后由群机器人自动发送活动信息与报名入口
 - 审批留痕：记录审批轮次、处理人、意见和时间；任一级驳回后可修改并重新提交
 - 分院权限：审核人只能查看和处理本学院、当前节点的待办，重复或越级审批会被拒绝
 - 权限占位：通过 `X-User-Id`、`X-User-Role`、`X-User-College` 模拟企业微信登录网关注入的身份
@@ -86,10 +87,10 @@ VITE_API_PROXY_TARGET=http://localhost:8080
 
 | 账号 | 初始密码 | 权限 |
 | --- | --- | --- |
-| `publisher` | `publisher123` | 活动发布人 |
-| `reviewer` | `reviewer123` | 学院审核老师 |
-| `leader` | `leader123` | 学院领导 |
-| `student` | `student123` | 学生 |
+| `publisher` | `123456` | 活动发布人 |
+| `reviewer` | `123456` | 学院审核老师 |
+| `leader` | `123456` | 学院领导 |
+| `student` | `123456` | 学生 |
 
 正式部署前请通过 `AUTH_*_PASSWORD` 环境变量修改初始密码；已有账号不会在重启时被覆盖。接入学校统一身份认证后，请设置 `AUTH_BOOTSTRAP_ENABLED=false` 关闭本地初始账号。
 
@@ -116,6 +117,12 @@ cd android
 
 任一审批节点驳回后状态变为 `REJECTED`；发布人修改并重新提交时，审批轮次加一，历史记录保留。
 
+## 企微信群通知
+
+企微自建应用不能直接枚举并向任意已有群聊发消息，因此系统使用群机器人作为稳定的发送通道。首次接入某个群聊时，在企微群设置中添加群机器人并复制 Webhook 地址，然后在活动编辑页的“发布通知”中选择“接入新的群聊”。Webhook 仅保存在后端数据库，接口和活动详情都不会返回明文。
+
+群聊只需接入一次。之后发布人创建活动时直接多选通知范围；两级审批过程中不会发送，发布人确认上架后才会异步通知所选群聊。单个群发送失败不会阻断活动发布，后台会保存发送结果。
+
 ## 主要接口
 
 - `POST /api/auth/login`：账号密码登录并签发会话令牌
@@ -137,6 +144,9 @@ cd android
 - `PUT /api/activities/{id}`：更新活动草稿
 - `POST /api/activities/{id}/submit`：提交审批
 - `POST /api/activities/{id}/publish`：两级审批通过后确认发布
+- `POST /api/activities/{id}/notifications/retry`：群聊通知部分失败或全部失败后重新发送
+- `GET /api/notification-groups`：读取可选企微群通知范围
+- `POST /api/notification-groups`：接入企微群机器人通知范围
 - `POST /api/activities/{id}/duplicate`：复制活动
 - `DELETE /api/activities/{id}`：删除可编辑草稿
 - `GET /api/approvals/tasks`：查询当前角色和学院的待办
@@ -178,3 +188,5 @@ npm run build
 ```
 
 当前版本用于课程项目原型。正式部署到企业微信前，还需接入企业微信 OAuth、从组织通讯录映射学院与角色，并完善文件存储和生产级消息通知。
+
+更完整的完成情况、线上状态和后续安排见 [`docs/CURRENT_PROGRESS.md`](docs/CURRENT_PROGRESS.md)。
