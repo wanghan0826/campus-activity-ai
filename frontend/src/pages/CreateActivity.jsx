@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react'
-import { parseDocument, getApiErrorMessage } from '../api/activity.js'
+import {
+  parseDocument,
+  getOfficialDocumentImportConfig,
+  importOfficialDocument,
+  getApiErrorMessage,
+} from '../api/activity.js'
 import ActivityCard from '../components/ActivityCard.jsx'
 
 const EMPTY = { creationMode: 'MANUAL', schedule: [], materials: [] }
@@ -9,8 +14,16 @@ export default function CreateActivity({ editingActivity, onActivityChanged, onC
   const [aiInput, setAiInput] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
+  const [documentImportEnabled, setDocumentImportEnabled] = useState(false)
+  const [documentUrl, setDocumentUrl] = useState('')
+  const [documentLoading, setDocumentLoading] = useState(false)
 
   useEffect(() => { setActivity(editingActivity || EMPTY) }, [editingActivity])
+  useEffect(() => {
+    getOfficialDocumentImportConfig()
+      .then(config => setDocumentImportEnabled(Boolean(config?.enabled)))
+      .catch(() => setDocumentImportEnabled(false))
+  }, [])
 
   const handleAiParse = async () => {
     if (!aiInput.trim()) return
@@ -21,6 +34,19 @@ export default function CreateActivity({ editingActivity, onActivityChanged, onC
       setAiInput('')
     } catch (e) { setAiError(getApiErrorMessage(e, 'AI 解析失败')) }
     finally { setAiLoading(false) }
+  }
+
+  const handleDocumentImport = async () => {
+    if (!documentUrl.trim()) return
+    setDocumentLoading(true); setAiError('')
+    try {
+      const resp = await importOfficialDocument(documentUrl.trim())
+      const rawDocument = resp?.result?.rawDocument || ''
+      setActivity({ ...EMPTY, ...(resp.result || {}), creationMode: 'AI', rawDocument })
+      setAiInput(rawDocument)
+      setDocumentUrl('')
+    } catch (e) { setAiError(getApiErrorMessage(e, '公文导入失败')) }
+    finally { setDocumentLoading(false) }
   }
 
   return (
@@ -46,6 +72,24 @@ export default function CreateActivity({ editingActivity, onActivityChanged, onC
           <button className="btn-primary" onClick={handleAiParse} disabled={aiLoading || !aiInput.trim()}>
             {aiLoading ? '解析中…' : '智能生成方案'}
           </button>
+          {documentImportEnabled && (
+            <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col sm:flex-row gap-2">
+              <input
+                value={documentUrl}
+                onChange={e => setDocumentUrl(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleDocumentImport() }}
+                className="form-input flex-1"
+                placeholder="粘贴学校公文通链接"
+              />
+              <button
+                className="btn-secondary whitespace-nowrap"
+                onClick={handleDocumentImport}
+                disabled={documentLoading || !documentUrl.trim()}
+              >
+                {documentLoading ? '导入中…' : '导入识别'}
+              </button>
+            </div>
+          )}
         </div>
       )}
 

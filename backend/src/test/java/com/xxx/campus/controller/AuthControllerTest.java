@@ -68,6 +68,35 @@ class AuthControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    void shouldExposeHealthAndKeepOptionalWeComLoginHiddenUntilConfigured() throws Exception {
+        mockMvc.perform(get("/api/system/health"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("UP"))
+                .andExpect(jsonPath("$.database").value("UP"));
+
+        mockMvc.perform(get("/api/auth/wecom/config"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.enabled").value(false));
+
+        mockMvc.perform(post("/api/auth/wecom/authorize"))
+                .andExpect(status().isServiceUnavailable());
+    }
+
+    @Test
+    void shouldRestrictCollegeAuditLogToReviewRoles() throws Exception {
+        String publisherToken = login("publisher", "123456", "PUBLISHER");
+        mockMvc.perform(get("/api/audit-logs")
+                        .header("Authorization", "Bearer " + publisherToken))
+                .andExpect(status().isForbidden());
+
+        String reviewerToken = login("reviewer", "123456", "COLLEGE_REVIEWER");
+        mockMvc.perform(get("/api/audit-logs")
+                        .header("Authorization", "Bearer " + reviewerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+    }
+
     private String login(String username, String password, String role) throws Exception {
         String response = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

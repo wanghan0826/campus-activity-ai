@@ -3,6 +3,7 @@ package com.xxx.campus.service;
 import com.xxx.campus.model.Activity;
 import com.xxx.campus.model.ActivityParsedResult;
 import com.xxx.campus.model.ActivityScheduleItem;
+import com.xxx.campus.model.UserAccount;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -43,6 +44,7 @@ public class ActivityService {
     private final WeComMessageService weComMessageService;
     private final WeComCalendarService weComCalendarService;
     private final NotificationGroupRepository notificationGroupRepository;
+    private final UserAccountRepository userAccountRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     public Map<String, Object> parseDocument(String document, String creatorId) {
@@ -85,15 +87,45 @@ public class ActivityService {
 
     @Transactional(readOnly = true)
     public Page<Activity> listActivities(String creatorId, String status, String keyword, int page, int size) {
+        return listActivities(creatorId, null, "MINE", status, keyword, page, size);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Activity> listActivities(String creatorId, String collegeCode, String scope,
+                                         String status, String keyword, int page, int size) {
         String normalizedStatus = normalizeFilter(status);
         String normalizedKeyword = normalizeFilter(keyword);
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100));
-        return activityRepository.searchOwnedActivities(creatorId, normalizedStatus, normalizedKeyword, pageable);
+        Page<Activity> result;
+        if ("COLLEGE".equalsIgnoreCase(scope) && !isBlank(collegeCode)) {
+            List<String> creatorIds = collegePublisherIds(collegeCode);
+            result = creatorIds.isEmpty()
+                    ? Page.empty(pageable)
+                    : activityRepository.searchActivitiesByCreators(creatorIds, normalizedStatus, normalizedKeyword, pageable);
+        } else {
+            result = activityRepository.searchOwnedActivities(creatorId, normalizedStatus, normalizedKeyword, pageable);
+        }
+        return decorateActivities(result, creatorId);
     }
 
     @Transactional(readOnly = true)
     public Activity getActivity(Long id, String creatorId) {
         return getOwnedActivity(id, creatorId);
+    }
+
+    @Transactional(readOnly = true)
+    public Activity getActivity(Long id, String creatorId, String collegeCode) {
+        Activity activity = activityRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "活动不存在或无权访问"));
+        if (!creatorId.equals(activity.getCreatorId())) {
+            UserAccount owner = userAccountRepository.findByUserId(activity.getCreatorId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "活动不存在或无权访问"));
+            if (isBlank(collegeCode) || !collegeCode.equals(owner.getCollegeCode())) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "活动不存在或无权访问");
+            }
+        }
+        decorateActivity(activity, creatorId, null);
+        return activity;
     }
 
     @Transactional
@@ -216,13 +248,52 @@ public class ActivityService {
 
     @Transactional(readOnly = true)
     public Map<String, Long> getStatusStats(String creatorId) {
+        return getStatusStats(creatorId, null, "MINE");
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Long> getStatusStats(String creatorId, String collegeCode, String scope) {
         Map<String, Long> stats = new LinkedHashMap<>();
         MANAGED_STATUSES.forEach(status -> stats.put(status, 0L));
-        activityRepository.countOwnedByStatus(creatorId).forEach(row ->
-                stats.put((String) row[0], (Long) row[1])
-        );
+        List<Object[]> rows;
+        if ("COLLEGE".equalsIgnoreCase(scope) && !isBlank(collegeCode)) {
+            List<String> creatorIds = collegePublisherIds(collegeCode);
+            rows = creatorIds.isEmpty() ? List.of() : activityRepository.countByCreatorsAndStatus(creatorIds);
+        } else {
+            rows = activityRepository.countOwnedByStatus(creatorId);
+        }
+        rows.forEach(row -> stats.put((String) row[0], (Long) row[1]));
         stats.put("ALL", stats.values().stream().mapToLong(Long::longValue).sum());
         return stats;
+    }
+
+    private List<String> collegePublisherIds(String collegeCode) {
+        return userAccountRepository
+                .findByCollegeCodeAndRoleAndEnabledTrueOrderByDisplayNameAsc(collegeCode, "PUBLISHER")
+                .stream()
+                .map(UserAccount::getUserId)
+                .distinct()
+                .toList();
+    }
+
+    private Page<Activity> decorateActivities(Page<Activity> page, String currentUserId) {
+        if (page.isEmpty()) {
+            return page;
+        }
+        Map<String, UserAccount> owners = userAccountRepository.findByUserIdIn(
+                        page.getContent().stream().map(Activity::getCreatorId).distinct().toList())
+                .stream()
+                .collect(java.util.stream.Collectors.toMap(UserAccount::getUserId, user -> user));
+        page.getContent().forEach(activity -> decorateActivity(activity, currentUserId, owners.get(activity.getCreatorId())));
+        return page;
+    }
+
+    private void decorateActivity(Activity activity, String currentUserId, UserAccount knownOwner) {
+        UserAccount owner = knownOwner != null ? knownOwner
+                : userAccountRepository.findByUserId(activity.getCreatorId()).orElse(null);
+        activity.setCreatorDisplayName(owner == null ? activity.getCreatorId() : owner.getDisplayName());
+        activity.setCreatorCollegeName(owner == null ? null : owner.getCollegeName());
+        activity.setOwnedByCurrentUser(currentUserId.equals(activity.getCreatorId()));
     }
 
     private void applyResult(Activity activity, ActivityParsedResult result) {

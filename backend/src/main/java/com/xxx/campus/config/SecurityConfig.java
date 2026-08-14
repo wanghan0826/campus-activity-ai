@@ -2,7 +2,9 @@ package com.xxx.campus.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xxx.campus.security.BearerTokenAuthFilter;
+import com.xxx.campus.security.OperationAuditFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -20,7 +22,15 @@ import java.util.Map;
 public class SecurityConfig {
 
     private final BearerTokenAuthFilter bearerTokenAuthFilter;
+    private final OperationAuditFilter operationAuditFilter;
     private final ObjectMapper objectMapper;
+
+    @Bean
+    public FilterRegistrationBean<OperationAuditFilter> operationAuditFilterRegistration(OperationAuditFilter filter) {
+        FilterRegistrationBean<OperationAuditFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -34,7 +44,8 @@ public class SecurityConfig {
                 .requestCache(cache -> cache.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/auth/login").permitAll()
+                        .requestMatchers("/api/auth/login", "/api/auth/wecom/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/system/health").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/ai/images/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/student/activities/**").authenticated()
                         .requestMatchers("/api/student/**").hasRole("STUDENT")
@@ -42,6 +53,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/activities/**", "/api/ai/**").hasRole("PUBLISHER")
                         .requestMatchers("/api/approvals/**")
                         .hasAnyRole("PUBLISHER", "COLLEGE_REVIEWER", "COLLEGE_LEADER")
+                        .requestMatchers(HttpMethod.GET, "/api/audit-logs")
+                        .hasAnyRole("COLLEGE_REVIEWER", "COLLEGE_LEADER")
                         .anyRequest().authenticated())
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint((request, response, exception) -> {
@@ -63,6 +76,7 @@ public class SecurityConfig {
                             ));
                         }))
                 .addFilterBefore(bearerTokenAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(operationAuditFilter, BearerTokenAuthFilter.class)
                 .build();
     }
 }

@@ -3,6 +3,7 @@ package com.xxx.campus.service;
 import com.xxx.campus.model.Activity;
 import com.xxx.campus.model.ActivityParsedResult;
 import com.xxx.campus.model.NotificationGroup;
+import com.xxx.campus.model.UserAccount;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +40,9 @@ class ActivityServiceTest {
 
     @Autowired
     private NotificationGroupRepository notificationGroupRepository;
+
+    @Autowired
+    private UserAccountRepository userAccountRepository;
 
     @BeforeEach
     void cleanDatabase() {
@@ -120,6 +124,37 @@ class ActivityServiceTest {
 
         activityService.deleteDraft(copy.getId(), CREATOR_ID);
         assertThat(activityService.getStatusStats(CREATOR_ID).get("ALL")).isEqualTo(1L);
+    }
+
+    @Test
+    void shouldAllowPublishersToViewButNotModifySameCollegeActivities() {
+        savePublisher(CREATOR_ID, "college_owner_test", "本院发布人", COLLEGE, "信息工程学院");
+        savePublisher("college_colleague_001", "college_colleague_test", "本院同事", COLLEGE, "信息工程学院");
+        savePublisher("other_college_001", "other_college_test", "外院发布人", "ART_DESIGN", "艺术设计学院");
+
+        Activity mine = activityService.createActivity(completeResult(), CREATOR_ID);
+        Activity colleague = activityService.createActivity(completeResult(), "college_colleague_001");
+        Activity outsider = activityService.createActivity(completeResult(), "other_college_001");
+
+        var collegeActivities = activityService.listActivities(
+                CREATOR_ID, COLLEGE, "COLLEGE", null, null, 0, 20);
+        assertThat(collegeActivities.getTotalElements()).isEqualTo(2);
+        assertThat(collegeActivities.getContent())
+                .extracting(Activity::getId)
+                .containsExactlyInAnyOrder(mine.getId(), colleague.getId());
+        Activity colleagueView = collegeActivities.getContent().stream()
+                .filter(activity -> activity.getId().equals(colleague.getId()))
+                .findFirst().orElseThrow();
+        assertThat(colleagueView.getCreatorDisplayName()).isEqualTo("本院同事");
+        assertThat(colleagueView.getOwnedByCurrentUser()).isFalse();
+        assertThat(activityService.getActivity(colleague.getId(), CREATOR_ID, COLLEGE).getId())
+                .isEqualTo(colleague.getId());
+
+        assertThatThrownBy(() -> activityService.deleteDraft(colleague.getId(), CREATOR_ID))
+                .isInstanceOf(ResponseStatusException.class);
+        assertThatThrownBy(() -> activityService.getActivity(outsider.getId(), CREATOR_ID, COLLEGE))
+                .isInstanceOf(ResponseStatusException.class);
+        assertThat(activityService.getStatusStats(CREATOR_ID, COLLEGE, "COLLEGE").get("ALL")).isEqualTo(2L);
     }
 
     @Test
@@ -257,5 +292,21 @@ class ActivityServiceTest {
         item.setContent("开场与规则介绍");
         result.setSchedule(List.of(item));
         return result;
+    }
+
+    private void savePublisher(String userId, String username, String displayName,
+                               String collegeCode, String collegeName) {
+        if (userAccountRepository.findByUserId(userId).isPresent()) return;
+        userAccountRepository.save(UserAccount.builder()
+                .userId(userId)
+                .username(username)
+                .passwordHash("test-only")
+                .displayName(displayName)
+                .role("PUBLISHER")
+                .collegeCode(collegeCode)
+                .collegeName(collegeName)
+                .authSource("LOCAL")
+                .enabled(true)
+                .build());
     }
 }

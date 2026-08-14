@@ -1,5 +1,11 @@
-import { useState } from 'react'
-import { getApiErrorMessage, login } from '../api/activity.js'
+import { useEffect, useRef, useState } from 'react'
+import {
+  beginWeComLogin,
+  completeWeComLogin,
+  getApiErrorMessage,
+  getWeComLoginConfig,
+  login,
+} from '../api/activity.js'
 
 export default function LoginPage({ onLogin }) {
   const [username, setUsername] = useState('')
@@ -7,6 +13,46 @@ export default function LoginPage({ onLogin }) {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [weComEnabled, setWeComEnabled] = useState(false)
+  const callbackStarted = useRef(false)
+
+  useEffect(() => {
+    getWeComLoginConfig()
+      .then(config => setWeComEnabled(Boolean(config?.enabled)))
+      .catch(() => setWeComEnabled(false))
+  }, [])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const code = params.get('code')
+    const state = params.get('state')
+    if (!code || !state || callbackStarted.current) return
+    callbackStarted.current = true
+    setLoading(true)
+    setError('')
+    completeWeComLogin(code, state)
+      .then(result => {
+        const cleanUrl = new URL(window.location.href)
+        cleanUrl.searchParams.delete('code')
+        cleanUrl.searchParams.delete('state')
+        window.history.replaceState({}, '', `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`)
+        onLogin(result.user)
+      })
+      .catch(requestError => setError(getApiErrorMessage(requestError, '企业微信登录失败')))
+      .finally(() => setLoading(false))
+  }, [onLogin])
+
+  const startWeComLogin = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const result = await beginWeComLogin()
+      window.location.assign(result.url)
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, '企业微信登录暂不可用'))
+      setLoading(false)
+    }
+  }
 
   const submit = async (event) => {
     event.preventDefault()
@@ -90,6 +136,13 @@ export default function LoginPage({ onLogin }) {
 
             <button type="submit" disabled={loading} className="min-h-12 w-full rounded-xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-700 disabled:cursor-wait disabled:opacity-60">{loading ? '正在登录…' : '登录'}</button>
           </form>
+
+          {weComEnabled && (
+            <div className="mt-5">
+              <div className="mb-5 flex items-center gap-3 text-xs text-stone-300"><span className="h-px flex-1 bg-stone-200" /><span>或</span><span className="h-px flex-1 bg-stone-200" /></div>
+              <button type="button" disabled={loading} onClick={startWeComLogin} className="min-h-12 w-full rounded-xl border border-stone-200 bg-white px-5 py-3 text-sm font-bold text-stone-700 transition hover:bg-stone-50 disabled:opacity-60">企业微信登录</button>
+            </div>
+          )}
 
           <p className="mt-8 text-center text-xs leading-5 text-stone-400">账号由学校或学院统一管理</p>
         </section>

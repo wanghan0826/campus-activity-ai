@@ -51,6 +51,21 @@ public class AuthService {
             throw badCredentials();
         }
 
+        return createSession(user);
+    }
+
+    @Transactional
+    public LoginResponse loginExternal(String authSource, String externalSubject) {
+        UserAccount user = userAccountRepository.findByAuthSourceAndExternalSubject(authSource, externalSubject)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "该企业微信账号尚未关联校内用户，请联系管理员"));
+        if (!user.isEnabled()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "账号已停用，请联系管理员");
+        }
+        return createSession(user);
+    }
+
+    private LoginResponse createSession(UserAccount user) {
         userSessionRepository.deleteByExpiresAtBefore(LocalDateTime.now());
         String token = generateToken();
         LocalDateTime expiresAt = LocalDateTime.now().plusHours(Math.max(sessionHours, 1));

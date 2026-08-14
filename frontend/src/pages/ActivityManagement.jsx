@@ -26,9 +26,10 @@ const FILTERS = [
 
 const CATEGORY_LABELS = { ART: '艺术类', SPORTS: '艺体类', PRACTICE: '实践类', LIFE: '生活类', FEATURE: '特色类' }
 
-export default function ActivityManagement({ onCreate, onEdit, onCheckIn, onRegistrations }) {
+export default function ActivityManagement({ user, onCreate, onEdit, onCheckIn, onRegistrations }) {
   const [activities, setActivities] = useState([])
   const [stats, setStats] = useState({})
+  const [scope, setScope] = useState('MINE')
   const [status, setStatus] = useState('ALL')
   const [keyword, setKeyword] = useState('')
   const [loading, setLoading] = useState(true)
@@ -41,8 +42,8 @@ export default function ActivityManagement({ onCreate, onEdit, onCheckIn, onRegi
     setError('')
     try {
       const [pageData, statsData] = await Promise.all([
-        getActivities({ status, keyword, size: 50 }),
-        getActivityStats(),
+        getActivities({ scope, status, keyword, size: 50 }),
+        getActivityStats(scope),
       ])
       setActivities(pageData.content || [])
       setStats(statsData || {})
@@ -51,7 +52,7 @@ export default function ActivityManagement({ onCreate, onEdit, onCheckIn, onRegi
     } finally {
       setLoading(false)
     }
-  }, [status, keyword])
+  }, [scope, status, keyword])
 
   useEffect(() => {
     const timer = window.setTimeout(loadActivities, keyword ? 300 : 0)
@@ -59,11 +60,11 @@ export default function ActivityManagement({ onCreate, onEdit, onCheckIn, onRegi
   }, [loadActivities, keyword])
 
   const summaryCards = useMemo(() => [
-    { label: '全部活动', value: stats.ALL || 0, hint: '我创建的活动', tone: 'indigo' },
+    { label: '全部活动', value: stats.ALL || 0, hint: scope === 'COLLEGE' ? '本学院发布人创建' : '我创建的活动', tone: 'indigo' },
     { label: '待完善草稿', value: stats.DRAFT || 0, hint: '可以继续编辑', tone: 'stone' },
     { label: '正在审批', value: stats.PENDING_APPROVAL || 0, hint: '等待审批处理', tone: 'amber' },
     { label: '已发布', value: stats.PUBLISHED || 0, hint: '学生端可见', tone: 'emerald' },
-  ], [stats])
+  ], [scope, stats])
 
   const handleDuplicate = async (activity) => {
     setActionId(activity.id)
@@ -125,7 +126,7 @@ export default function ActivityManagement({ onCreate, onEdit, onCheckIn, onRegi
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">活动管理</h1>
+          <h1 className="text-xl font-bold text-gray-900">{scope === 'COLLEGE' ? '本学院活动' : '我的活动'}</h1>
           <p className="text-sm text-gray-500 mt-1">共 {stats.ALL || 0} 个活动 · 草稿 {stats.DRAFT || 0} · 审批中 {stats.PENDING_APPROVAL || 0} · 已发布 {stats.PUBLISHED || 0}</p>
         </div>
         <div className="flex gap-2">
@@ -136,12 +137,18 @@ export default function ActivityManagement({ onCreate, onEdit, onCheckIn, onRegi
 
       <div className="admin-card mb-6" style={{ padding: '12px 16px' }}>
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-          <div className="flex gap-1.5 flex-wrap">
-            {FILTERS.map(([k, label]) => (
-              <button key={k} onClick={() => setStatus(k)} className={`px-2.5 py-1 text-xs font-medium rounded border transition ${status === k ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}>
-                {label}{stats[k] !== undefined ? ` (${stats[k]})` : ''}
-              </button>
-            ))}
+          <div className="space-y-2">
+            <div className="inline-flex rounded border border-gray-200 bg-gray-50 p-0.5">
+              <button type="button" onClick={() => setScope('MINE')} className={`rounded px-3 py-1 text-xs font-semibold ${scope === 'MINE' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'}`}>我的活动</button>
+              <button type="button" onClick={() => setScope('COLLEGE')} className={`rounded px-3 py-1 text-xs font-semibold ${scope === 'COLLEGE' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'}`}>本学院</button>
+            </div>
+            <div className="flex gap-1.5 flex-wrap">
+              {FILTERS.map(([k, label]) => (
+                <button key={k} onClick={() => setStatus(k)} className={`px-2.5 py-1 text-xs font-medium rounded border transition ${status === k ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}>
+                  {label}{stats[k] !== undefined ? ` (${stats[k]})` : ''}
+                </button>
+              ))}
+            </div>
           </div>
           <input value={keyword} onChange={e => setKeyword(e.target.value)} placeholder="搜索…" className="form-input max-w-48" />
         </div>
@@ -162,6 +169,7 @@ export default function ActivityManagement({ onCreate, onEdit, onCheckIn, onRegi
                 <tr key={a.id}>
                   <td className="font-medium text-gray-900 cursor-pointer hover:text-blue-600" onClick={() => setPreview(a)}>
                     <div>{a.title || '未命名'}</div>
+                    <div className="mt-1 text-xs font-normal text-gray-400">发布人：{a.creatorDisplayName || a.creatorId || '-'}</div>
                     {a.notificationTargets?.length > 0 && (
                       <div className={`mt-1 text-xs font-normal ${notificationTone(a.notificationDeliveryStatus)}`} title={a.notificationDeliverySummary || ''}>
                         {notificationLabel(a)}
@@ -176,10 +184,13 @@ export default function ActivityManagement({ onCreate, onEdit, onCheckIn, onRegi
                   <td>
                     <div className="flex gap-1">
                       <button onClick={() => setPreview(a)} className="btn-secondary btn-sm">查看</button>
-                      {['DRAFT','REJECTED'].includes(a.status) && <button onClick={() => onEdit(a)} className="btn-secondary btn-sm">编辑</button>}
-                      {a.status === 'APPROVED' && <button disabled={actionId === a.id} onClick={() => handlePublish(a)} className="btn-primary btn-sm">发布</button>}
-                      {a.status === 'PUBLISHED' && ['FAILED','PARTIAL'].includes(a.notificationDeliveryStatus) && <button disabled={actionId === a.id} onClick={() => handleRetryNotification(a)} className="btn-secondary btn-sm">重试通知</button>}
-                      {['DRAFT','REJECTED'].includes(a.status) && <button onClick={() => handleDelete(a)} className="btn-danger btn-sm">删除</button>}
+                      {a.ownedByCurrentUser !== false && ['PUBLISHED','OFFLINE'].includes(a.status) && a.registrationRequired !== false && <button onClick={() => onRegistrations(a)} className="btn-secondary btn-sm">报名管理</button>}
+                      {a.ownedByCurrentUser !== false && ['PUBLISHED','OFFLINE'].includes(a.status) && <button onClick={() => onCheckIn(a)} className="btn-secondary btn-sm">签到表</button>}
+                      {a.ownedByCurrentUser !== false && ['DRAFT','REJECTED'].includes(a.status) && <button onClick={() => onEdit(a)} className="btn-secondary btn-sm">编辑</button>}
+                      {a.ownedByCurrentUser !== false && a.status === 'APPROVED' && <button disabled={actionId === a.id} onClick={() => handlePublish(a)} className="btn-primary btn-sm">发布</button>}
+                      {a.ownedByCurrentUser !== false && a.status === 'PUBLISHED' && ['FAILED','PARTIAL'].includes(a.notificationDeliveryStatus) && <button disabled={actionId === a.id} onClick={() => handleRetryNotification(a)} className="btn-secondary btn-sm">重试通知</button>}
+                      {a.ownedByCurrentUser !== false && <button disabled={actionId === a.id} onClick={() => handleDuplicate(a)} className="btn-secondary btn-sm">复制</button>}
+                      {a.ownedByCurrentUser !== false && ['DRAFT','REJECTED'].includes(a.status) && <button onClick={() => handleDelete(a)} className="btn-danger btn-sm">删除</button>}
                     </div>
                   </td>
                 </tr>

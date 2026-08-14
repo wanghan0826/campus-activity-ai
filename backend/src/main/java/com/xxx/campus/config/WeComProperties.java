@@ -39,4 +39,13 @@ public class WeComProperties {
 
     /** 前端地址，用于卡片消息跳转 */
     private String frontendUrl;
+
+    /** 是否在登录页启用企业微信网页授权 */
+    private boolean oauthEnabled;
+
+    /** 企业微信授权完成后返回的前端完整地址 */
+    private String oauthRedirectUri;
+
+    /** 企业微信网页授权范围 */
+    private String oauthScope = "snsapi_base";
 }

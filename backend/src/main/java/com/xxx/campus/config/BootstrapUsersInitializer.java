@@ -36,6 +36,7 @@ public class BootstrapUsersInitializer implements ApplicationRunner {
     @Transactional
     public void run(ApplicationArguments args) {
         createIfMissing("publisher", publisherPassword, "test_teacher_001", "活动发布人", "PUBLISHER");
+        createIfMissing("publisher2", publisherPassword, "test_teacher_002", "活动发布人（二）", "PUBLISHER");
         createIfMissing("reviewer", reviewerPassword, "review_teacher_001", "学院审核老师", "COLLEGE_REVIEWER");
         createIfMissing("leader", leaderPassword, "college_leader_001", "学院领导", "COLLEGE_LEADER");
         createIfMissing("student", studentPassword, "student_001", "学生用户", "STUDENT");

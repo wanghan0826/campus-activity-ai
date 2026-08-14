@@ -37,8 +37,26 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
                                          @Param("keyword") String keyword,
                                          Pageable pageable);
 
+    @Query("""
+            select a from Activity a
+            where a.creatorId in :creatorIds
+              and (:status is null or a.status = :status)
+              and (:keyword is null
+                   or lower(a.title) like lower(concat('%', :keyword, '%'))
+                   or lower(coalesce(a.location, '')) like lower(concat('%', :keyword, '%'))
+                   or lower(coalesce(a.organizer, '')) like lower(concat('%', :keyword, '%')))
+            order by a.updatedAt desc
+            """)
+    Page<Activity> searchActivitiesByCreators(@Param("creatorIds") List<String> creatorIds,
+                                               @Param("status") String status,
+                                               @Param("keyword") String keyword,
+                                               Pageable pageable);
+
     @Query("select a.status, count(a) from Activity a where a.creatorId = :creatorId group by a.status")
     List<Object[]> countOwnedByStatus(@Param("creatorId") String creatorId);
+
+    @Query("select a.status, count(a) from Activity a where a.creatorId in :creatorIds group by a.status")
+    List<Object[]> countByCreatorsAndStatus(@Param("creatorIds") List<String> creatorIds);
 
     @Query("""
             select a from Activity a

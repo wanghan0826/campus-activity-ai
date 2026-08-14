@@ -80,6 +80,35 @@ const EMPTY_RESULT = {
   notificationTargets: [],
 }
 
+const GROUP_AVATAR_COLORS = [
+  'bg-emerald-500',
+  'bg-sky-500',
+  'bg-violet-500',
+  'bg-amber-500',
+  'bg-rose-500',
+  'bg-cyan-500',
+]
+
+function groupAvatarColor(group) {
+  const source = String(group?.id ?? group?.groupId ?? group?.name ?? group?.groupName ?? '')
+  const checksum = [...source].reduce((total, character) => total + character.charCodeAt(0), 0)
+  return GROUP_AVATAR_COLORS[checksum % GROUP_AVATAR_COLORS.length]
+}
+
+function groupAvatarText(group) {
+  const name = String(group?.name ?? group?.groupName ?? '群').trim()
+  const readableName = name.replace(/^\d{2,4}级/, '')
+  return readableName.slice(0, 1) || name.slice(0, 1) || '群'
+}
+
+function GroupAvatar({ group, className = 'h-11 w-11', textClassName = 'text-sm' }) {
+  return (
+    <span className={`grid shrink-0 place-items-center rounded-xl text-white shadow-sm ${groupAvatarColor(group)} ${className}`}>
+      <span className={`font-semibold ${textClassName}`}>{groupAvatarText(group)}</span>
+    </span>
+  )
+}
+
 const REQUIRED_FIELDS = ['title', 'category', 'location', 'content', 'startTime', 'endTime']
 
 function isBlank(value) {
@@ -303,28 +332,42 @@ export default function ActivityCard({
             </section>
           ))}
 
-          <section className="rounded border border-blue-100 bg-blue-50/60 p-4">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-blue-100 pb-3">
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900">发布通知</h3>
-                <p className="mt-1 text-xs text-gray-500">选择活动正式发布后需要通知的企微群</p>
-              </div>
-              <button type="button" onClick={() => setShowGroupPicker(true)} className="btn-secondary btn-sm">
-                {activity.notificationTargets?.length ? '重新选择' : '选择群聊'}
-              </button>
-            </div>
-            {activity.notificationTargets?.length ? (
-              <div className="flex flex-wrap gap-2">
-                {activity.notificationTargets.map((target) => (
-                  <span key={target.groupId ?? target.id} className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-medium text-blue-700">
-                    <span className="text-emerald-500">●</span>{target.groupName ?? target.name}
+          <section>
+            <h3 className="mb-3 border-b border-gray-100 pb-2 text-sm font-semibold text-gray-900">发布通知</h3>
+            <button
+              type="button"
+              onClick={() => setShowGroupPicker(true)}
+              className="flex w-full items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3.5 text-left shadow-sm transition hover:border-emerald-300 hover:shadow"
+            >
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                {activity.notificationTargets?.length ? (
+                  <div className="flex shrink-0 -space-x-2">
+                    {activity.notificationTargets.slice(0, 3).map((target) => (
+                      <GroupAvatar key={target.groupId ?? target.id} group={target} className="h-10 w-10 border-2 border-white" textClassName="text-xs" />
+                    ))}
+                    {activity.notificationTargets.length > 3 && (
+                      <span className="grid h-10 w-10 place-items-center rounded-xl border-2 border-white bg-gray-100 text-xs font-semibold text-gray-500">
+                        +{activity.notificationTargets.length - 3}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-50 text-xl text-emerald-600">↗</span>
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold text-gray-900">发送范围</span>
+                  <span className="mt-0.5 block truncate text-xs text-gray-500">
+                    {activity.notificationTargets?.length
+                      ? activity.notificationTargets.map((target) => target.groupName ?? target.name).join('、')
+                      : '选择接收活动通知的群聊'}
                   </span>
-                ))}
+                </span>
               </div>
-            ) : (
-              <div className="rounded border border-dashed border-blue-200 bg-white px-4 py-3 text-sm text-gray-400">暂不发送群聊通知</div>
-            )}
-            <p className="mt-3 text-xs text-gray-500">草稿和审批阶段不会发送，审批通过并正式发布后自动通知。</p>
+              {activity.notificationTargets?.length ? (
+                <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">发布后发送</span>
+              ) : null}
+              <span className="shrink-0 text-xl leading-none text-gray-300">›</span>
+            </button>
           </section>
 
           <section>
@@ -399,6 +442,11 @@ function NotificationGroupPicker({ groups, selectedTargets, onClose, onGroupsCha
     return availableGroups.filter((group) => group.name.toLowerCase().includes(normalized))
   }, [availableGroups, keyword])
 
+  const selectedGroups = useMemo(
+    () => availableGroups.filter((group) => selectedIds.has(group.id)),
+    [availableGroups, selectedIds],
+  )
+
   const toggle = (id) => {
     setSelectedIds((current) => {
       const next = new Set(current)
@@ -410,7 +458,7 @@ function NotificationGroupPicker({ groups, selectedTargets, onClose, onGroupsCha
 
   const addGroup = async () => {
     if (!name.trim() || !webhookUrl.trim()) {
-      setFormError('请填写群聊名称和机器人 Webhook 地址')
+      setFormError('请填写群聊名称和消息推送地址')
       return
     }
     setSaving(true)
@@ -425,7 +473,7 @@ function NotificationGroupPicker({ groups, selectedTargets, onClose, onGroupsCha
       setWebhookUrl('')
       setShowAdd(false)
     } catch (requestError) {
-      setFormError(getApiErrorMessage(requestError, '群聊接入失败，请检查 Webhook 地址'))
+      setFormError(getApiErrorMessage(requestError, '群聊接入失败，请检查消息推送地址'))
     } finally {
       setSaving(false)
     }
@@ -438,64 +486,96 @@ function NotificationGroupPicker({ groups, selectedTargets, onClose, onGroupsCha
   }
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-gray-950/50 p-0 sm:items-center sm:p-4" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <div className="max-h-[92vh] w-full overflow-y-auto rounded-t-xl bg-white shadow-2xl sm:max-w-xl sm:rounded-lg">
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-5 py-4">
-          <div><h3 className="font-bold text-gray-900">选择通知群聊</h3><p className="mt-1 text-xs text-gray-400">已选择 {selectedIds.size} 个</p></div>
-          <button type="button" onClick={onClose} className="btn-secondary btn-sm">关闭</button>
+    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-gray-950/45 p-0 backdrop-blur-[1px] sm:items-center sm:p-4" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <div className="flex h-[94vh] w-full flex-col overflow-hidden rounded-t-[24px] bg-[#f5f5f5] shadow-2xl sm:h-[700px] sm:max-h-[88vh] sm:max-w-[520px] sm:rounded-[24px]">
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-gray-200/80 bg-white px-4">
+          <button type="button" onClick={onClose} className="rounded-lg px-2 py-1 text-sm text-gray-600 transition hover:bg-gray-100">取消</button>
+          <div className="font-semibold text-gray-950">选择群聊</div>
+          <span className="min-w-[44px] text-right text-sm text-gray-400">{selectedIds.size ? `${selectedIds.size} 个` : ''}</span>
         </div>
 
-        <div className="space-y-3 p-5">
-          {availableGroups.length > 0 && (
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索群聊" className="form-input flex-1" autoFocus />
-              <div className="grid grid-cols-2 gap-2 sm:flex">
-                <button type="button" onClick={() => setSelectedIds(new Set(availableGroups.map((group) => group.id)))} className="btn-secondary btn-sm">全选</button>
-                <button type="button" onClick={() => setSelectedIds(new Set())} className="btn-secondary btn-sm">清空</button>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {selectedGroups.length > 0 && (
+            <div className="border-b border-gray-200/80 bg-white px-4 py-4">
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-xs font-medium text-gray-500">已选择</span>
+                <button type="button" onClick={() => setSelectedIds(new Set())} className="text-xs text-gray-400 hover:text-gray-700">清空</button>
+              </div>
+              <div className="flex gap-4 overflow-x-auto pb-1">
+                {selectedGroups.map((group) => (
+                  <button key={group.id} type="button" onClick={() => toggle(group.id)} className="group relative w-14 shrink-0 text-center" aria-label={`移除${group.name}`}>
+                    <GroupAvatar group={group} className="mx-auto h-12 w-12" />
+                    <span className="absolute -right-0.5 -top-1 grid h-5 w-5 place-items-center rounded-full border-2 border-white bg-gray-500 text-[11px] leading-none text-white group-hover:bg-red-500">×</span>
+                    <span className="mt-1.5 block truncate text-xs text-gray-600">{group.name}</span>
+                  </button>
+                ))}
               </div>
             </div>
           )}
 
-          {filteredGroups.map((group) => (
-            <label key={group.id} className={`flex cursor-pointer items-center gap-3 rounded border p-4 transition ${selectedIds.has(group.id) ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:border-blue-300'}`}>
-              <input type="checkbox" checked={selectedIds.has(group.id)} onChange={() => toggle(group.id)} className="h-5 w-5 rounded border-gray-300 text-blue-600" />
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded bg-emerald-100 text-sm font-bold text-emerald-700">群</span>
-              <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-gray-800">{group.name}</span><span className="mt-0.5 block text-xs text-gray-400">企微群机器人</span></span>
-              {selectedIds.has(group.id) && <span className="text-xs font-semibold text-blue-600">已选</span>}
+          <div className="bg-white px-4 py-3">
+            <label className="flex h-10 items-center gap-2 rounded-lg bg-[#f3f3f3] px-3">
+              <span className="text-base text-gray-400">⌕</span>
+              <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索群聊" className="min-w-0 flex-1 border-0 bg-transparent text-sm text-gray-800 outline-none placeholder:text-gray-400" autoFocus />
+              {keyword && <button type="button" onClick={() => setKeyword('')} className="grid h-5 w-5 place-items-center rounded-full bg-gray-300 text-xs text-white">×</button>}
             </label>
-          ))}
+          </div>
 
-          {!availableGroups.length && !showAdd && (
-            <div className="rounded border border-dashed border-gray-300 px-5 py-8 text-center text-sm text-gray-400">还没有接入通知群聊</div>
-          )}
+          <div className="px-4 pb-4 pt-5">
+            <div className="mb-2 px-1 text-xs font-medium text-gray-500">可选群聊</div>
+            <div className="overflow-hidden rounded-xl bg-white">
+              {filteredGroups.map((group, index) => {
+                const selected = selectedIds.has(group.id)
+                return (
+                  <button
+                    key={group.id}
+                    type="button"
+                    onClick={() => toggle(group.id)}
+                    aria-pressed={selected}
+                    className={`flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-gray-50 ${index ? 'border-t border-gray-100' : ''}`}
+                  >
+                    <GroupAvatar group={group} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[15px] font-medium text-gray-900">{group.name}</span>
+                      <span className="mt-0.5 block text-xs text-gray-400">发布后发送</span>
+                    </span>
+                    <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border text-sm font-bold transition ${selected ? 'border-[#07c160] bg-[#07c160] text-white' : 'border-gray-300 bg-white text-transparent'}`}>✓</span>
+                  </button>
+                )
+              })}
 
-          {availableGroups.length > 0 && !filteredGroups.length && (
-            <div className="rounded border border-dashed border-gray-300 px-5 py-8 text-center text-sm text-gray-400">没有找到匹配的群聊</div>
-          )}
+              {!availableGroups.length && !showAdd && (
+                <div className="px-5 py-10 text-center text-sm text-gray-400">还没有可选群聊</div>
+              )}
 
-          {showAdd ? (
-            <div className="rounded border border-emerald-200 bg-emerald-50 p-4">
-              <div className="text-sm font-semibold text-gray-800">接入一个群聊</div>
-              <input value={name} onChange={(event) => setName(event.target.value)} maxLength={100} placeholder="群聊名称" className="form-input mt-3 bg-white" />
-              <input type="password" value={webhookUrl} onChange={(event) => setWebhookUrl(event.target.value)} placeholder="群机器人 Webhook 地址" className="form-input mt-2 bg-white" />
-              <p className="mt-2 text-xs leading-5 text-gray-500">在目标企微信群的群设置中添加机器人，然后复制 Webhook 地址。</p>
-              {formError && <div className="mt-2 text-xs font-medium text-red-600">{formError}</div>}
-              <div className="mt-3 flex justify-end gap-2">
-                <button type="button" onClick={() => { setShowAdd(false); setFormError('') }} className="btn-secondary btn-sm">取消</button>
-                <button type="button" disabled={saving} onClick={addGroup} className="btn-primary btn-sm">{saving ? '正在接入…' : '保存并选择'}</button>
+              {availableGroups.length > 0 && !filteredGroups.length && (
+                <div className="px-5 py-10 text-center text-sm text-gray-400">没有找到匹配的群聊</div>
+              )}
+            </div>
+
+            {showAdd ? (
+              <div className="mt-4 rounded-xl bg-white p-4 shadow-sm">
+                <div className="text-sm font-semibold text-gray-900">接入新群聊</div>
+                <input value={name} onChange={(event) => setName(event.target.value)} maxLength={100} placeholder="群聊名称" className="form-input mt-3 bg-white" />
+                <input type="password" value={webhookUrl} onChange={(event) => setWebhookUrl(event.target.value)} placeholder="消息推送地址" className="form-input mt-2 bg-white" />
+                {formError && <div className="mt-2 text-xs font-medium text-red-600">{formError}</div>}
+                <div className="mt-3 flex justify-end gap-2">
+                  <button type="button" onClick={() => { setShowAdd(false); setFormError('') }} className="btn-secondary btn-sm">取消</button>
+                  <button type="button" disabled={saving} onClick={addGroup} className="btn-primary btn-sm">{saving ? '正在接入…' : '保存并选择'}</button>
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between gap-3 rounded bg-gray-50 px-4 py-3">
-              <span className="text-xs text-gray-500">通知范围通常只需配置一次</span>
-              <button type="button" onClick={() => setShowAdd(true)} className="text-xs font-semibold text-emerald-700 hover:text-emerald-800">添加通知范围</button>
-            </div>
-          )}
+            ) : (
+              <button type="button" onClick={() => setShowAdd(true)} className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-white px-4 py-3 text-sm font-medium text-gray-600 transition hover:text-emerald-700">
+                <span className="text-lg font-light">＋</span> 接入新群聊
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="sticky bottom-0 grid grid-cols-2 gap-3 border-t border-gray-200 bg-white p-4">
-          <button type="button" onClick={onClose} className="btn-secondary">取消</button>
-          <button type="button" onClick={confirm} className="btn-primary">确定选择</button>
+        <div className="shrink-0 border-t border-gray-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <button type="button" onClick={confirm} className="w-full rounded-lg bg-[#07c160] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#06ad56] active:scale-[0.99]">
+            {selectedIds.size ? `完成（${selectedIds.size}）` : '完成'}
+          </button>
         </div>
       </div>
     </div>

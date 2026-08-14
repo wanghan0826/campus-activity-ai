@@ -179,6 +179,16 @@ public class Activity {
     @Column(nullable = false, length = 100)
     private String creatorId;
 
+    /** 以下字段只用于当前请求的展示和权限提示，不写入活动表。 */
+    @Transient
+    private String creatorDisplayName;
+
+    @Transient
+    private String creatorCollegeName;
+
+    @Transient
+    private Boolean ownedByCurrentUser;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

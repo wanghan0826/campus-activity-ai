@@ -46,6 +46,22 @@ export async function login(username, password) {
   return data
 }
 
+export async function getWeComLoginConfig() {
+  const { data } = await api.get('/auth/wecom/config')
+  return data
+}
+
+export async function beginWeComLogin() {
+  const { data } = await api.post('/auth/wecom/authorize')
+  return data
+}
+
+export async function completeWeComLogin(code, state) {
+  const { data } = await api.post('/auth/wecom/callback', { code, state })
+  setAuthToken(data.token)
+  return data
+}
+
 export async function getCurrentUser() {
   const { data } = await api.get('/auth/me')
   return data
@@ -123,6 +139,16 @@ export async function parseDocument(document) {
   return data
 }
 
+export async function getOfficialDocumentImportConfig() {
+  const { data } = await api.get('/activities/import-link/config')
+  return data
+}
+
+export async function importOfficialDocument(url) {
+  const { data } = await api.post('/activities/import-link', { url })
+  return data
+}
+
 export async function createActivity(result) {
   const { data } = await api.post('/activities', result)
   return data
@@ -133,15 +159,15 @@ export async function updateActivity(id, result) {
   return data
 }
 
-export async function getActivities({ status = 'ALL', keyword = '', page = 0, size = 20 } = {}) {
+export async function getActivities({ scope = 'MINE', status = 'ALL', keyword = '', page = 0, size = 20 } = {}) {
   const { data } = await api.get('/activities', {
-    params: { status: status === 'ALL' ? undefined : status, keyword: keyword || undefined, page, size },
+    params: { scope, status: status === 'ALL' ? undefined : status, keyword: keyword || undefined, page, size },
   })
   return data
 }
 
-export async function getActivityStats() {
-  const { data } = await api.get('/activities/stats')
+export async function getActivityStats(scope = 'MINE') {
+  const { data } = await api.get('/activities/stats', { params: { scope } })
   return data
 }
 

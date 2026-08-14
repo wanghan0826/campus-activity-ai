@@ -3,9 +3,11 @@ package com.xxx.campus.controller;
 import com.xxx.campus.model.Activity;
 import com.xxx.campus.model.ActivityParsedResult;
 import com.xxx.campus.model.ActivityRequest;
+import com.xxx.campus.model.OfficialDocumentImportRequest;
 import com.xxx.campus.model.SubmitApprovalRequest;
 import com.xxx.campus.security.AuthenticatedUser;
 import com.xxx.campus.service.ActivityService;
+import com.xxx.campus.service.OfficialDocumentImportService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -23,12 +25,30 @@ import java.util.Map;
 public class ActivityController {
 
     private final ActivityService activityService;
+    private final OfficialDocumentImportService officialDocumentImportService;
 
     @PostMapping("/parse")
     public ResponseEntity<Map<String, Object>> parseActivity(
             @Valid @RequestBody ActivityRequest request,
             @AuthenticationPrincipal AuthenticatedUser user) {
         return ResponseEntity.ok(activityService.parseDocument(request.getDocument(), user.userId()));
+    }
+
+    @GetMapping("/import-link/config")
+    public ResponseEntity<Map<String, Object>> getImportLinkConfig() {
+        return ResponseEntity.ok(officialDocumentImportService.configView());
+    }
+
+    @PostMapping("/import-link")
+    public ResponseEntity<Map<String, Object>> importOfficialDocument(
+            @Valid @RequestBody OfficialDocumentImportRequest request,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        OfficialDocumentImportService.ImportedDocument document =
+                officialDocumentImportService.importDocument(request.getUrl());
+        Map<String, Object> response = activityService.parseDocument(document.text(), user.userId());
+        response.put("sourceUrl", document.sourceUrl());
+        response.put("sourceTitle", document.title());
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping
@@ -42,23 +62,26 @@ public class ActivityController {
     public ResponseEntity<Page<Activity>> listActivities(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "MINE") String scope,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @AuthenticationPrincipal AuthenticatedUser user) {
-        return ResponseEntity.ok(activityService.listActivities(user.userId(), status, keyword, page, size));
+        return ResponseEntity.ok(activityService.listActivities(
+                user.userId(), user.collegeCode(), scope, status, keyword, page, size));
     }
 
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Long>> getStats(
+            @RequestParam(defaultValue = "MINE") String scope,
             @AuthenticationPrincipal AuthenticatedUser user) {
-        return ResponseEntity.ok(activityService.getStatusStats(user.userId()));
+        return ResponseEntity.ok(activityService.getStatusStats(user.userId(), user.collegeCode(), scope));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<Activity> getActivity(
             @PathVariable Long id,
             @AuthenticationPrincipal AuthenticatedUser user) {
-        return ResponseEntity.ok(activityService.getActivity(id, user.userId()));
+        return ResponseEntity.ok(activityService.getActivity(id, user.userId(), user.collegeCode()));
     }
 
     @PutMapping("/{id}")

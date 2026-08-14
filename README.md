@@ -22,11 +22,14 @@
 - 角色权限：活动发布人、学院审核老师、学院领导、学生分别只能访问对应功能，后端拒绝越权请求
 - 学校认证预留：用户表包含认证来源与学校侧唯一身份字段，后续可映射学校统一身份认证结果
 - 活动管理：状态统计、搜索筛选、详情预览、继续编辑、复制和删除草稿
+- 学院协作视图：发布人可切换查看本学院教师创建的活动，创建人信息清晰可见；编辑、删除、发布等操作仍只属于原创建人
 - 两级审批：发布人提交后依次流转至学院审核老师、学院领导，终审通过后由发布人确认上架
 - 群聊通知范围：创建活动时可多选已接入的企微信群，草稿和审批阶段保持静默，正式发布后由群机器人自动发送活动信息与报名入口
 - 审批留痕：记录审批轮次、处理人、意见和时间；任一级驳回后可修改并重新提交
 - 分院权限：审核人只能查看和处理本学院、当前节点的待办，重复或越级审批会被拒绝
-- 权限占位：通过 `X-User-Id`、`X-User-Role`、`X-User-College` 模拟企业微信登录网关注入的身份
+- 公文链接导入：在学校域名白名单内抓取公文网页正文，交给现有 AI 和相对日期解析生成活动草稿；默认关闭，配置完成后入口自动显示
+- 企业微信登录预留：已实现可选 OAuth 登录流程和本地账号映射，未配置时登录页保持原样
+- 运行基础：提供数据库健康检查，并自动记录已登录用户对业务接口的新增、修改、审批等操作
 
 ## 技术栈
 
@@ -54,6 +57,15 @@ mvn spring-boot:run
 ```
 
 后端默认地址：`http://localhost:8080`
+
+如果只想本地体验、不想安装或配置 MySQL，可使用内置的文件型演示数据库：
+
+```powershell
+cd backend
+mvn spring-boot:run "-Dspring-boot.run.profiles=local-demo"
+```
+
+演示数据保存在 `backend/data/campus_local.mv.db`，重启后仍会保留；该目录不会提交到 GitHub。线上仍使用默认 MySQL 配置。
 
 本地原型也可以启动后，在页面右上角打开“AI 设置”输入 DeepSeek API Key。通过页面输入的 Key 只保存在当前后端进程内存中，不写数据库、浏览器存储或项目文件，后端重启后会自动清除；状态接口只返回掩码，不返回明文。
 
@@ -88,11 +100,35 @@ VITE_API_PROXY_TARGET=http://localhost:8080
 | 账号 | 初始密码 | 权限 |
 | --- | --- | --- |
 | `publisher` | `123456` | 活动发布人 |
+| `publisher2` | `123456` | 同学院第二位活动发布人（协作视图测试） |
 | `reviewer` | `123456` | 学院审核老师 |
 | `leader` | `123456` | 学院领导 |
 | `student` | `123456` | 学生 |
 
 正式部署前请通过 `AUTH_*_PASSWORD` 环境变量修改初始密码；已有账号不会在重启时被覆盖。接入学校统一身份认证后，请设置 `AUTH_BOOTSTRAP_ENABLED=false` 关闭本地初始账号。
+
+### 4. 可选接入学校公文链接
+
+只有明确列入白名单的域名才允许抓取，默认拒绝 HTTP、本机地址和内网地址：
+
+```powershell
+$env:DOCUMENT_IMPORT_ENABLED="true"
+$env:DOCUMENT_IMPORT_ALLOWED_HOSTS="gongwen.example.edu,notice.example.edu"
+```
+
+如果公文通只在学校内网开放，应在校内服务器上运行后端，并根据实际网络设置 `DOCUMENT_IMPORT_ALLOW_PRIVATE_ADDRESSES=true`；不要在公网服务器上放开任意内网抓取。
+
+### 5. 可选启用企业微信登录
+
+```powershell
+$env:WECOM_OAUTH_ENABLED="true"
+$env:WECOM_CORP_ID="企业ID"
+$env:WECOM_AGENT_ID="应用AgentID"
+$env:WECOM_SECRET="应用Secret"
+$env:WECOM_OAUTH_REDIRECT_URI="https://你的可信域名/"
+```
+
+企业微信返回的 `UserId` 需要预先写入 `app_user.external_subject`，同时将该用户的 `auth_source` 设为 `WECOM`。系统不会根据首次登录自动授予角色，避免越权。
 
 ## Android 测试包
 
@@ -128,7 +164,12 @@ cd android
 - `POST /api/auth/login`：账号密码登录并签发会话令牌
 - `GET /api/auth/me`：读取当前登录用户与角色
 - `POST /api/auth/logout`：注销当前会话
+- `GET /api/auth/wecom/config`：查询企业微信登录是否可用
+- `POST /api/auth/wecom/authorize`：生成带一次性校验参数的企业微信授权地址
+- `POST /api/auth/wecom/callback`：校验企业微信身份并签发本系统会话
 - `POST /api/activities/parse`：AI 解析活动描述
+- `GET /api/activities/import-link/config`：查询公文链接导入是否可用
+- `POST /api/activities/import-link`：读取白名单内公文页面并生成活动方案
 - `GET /api/ai/settings`：查询 AI Key 是否已配置（只返回掩码）
 - `PUT /api/ai/settings`：在当前后端进程内存中配置 API Key
 - `DELETE /api/ai/settings`：清除内存中的 API Key
@@ -138,7 +179,7 @@ cd android
 - `POST /api/ai/images/generate`：根据提示词生成并保存活动封面
 - `GET /api/ai/images/{fileName}`：读取已生成的活动封面
 - `POST /api/activities`：保存活动草稿
-- `GET /api/activities`：分页查询个人活动
+- `GET /api/activities`：分页查询个人活动；`scope=COLLEGE` 时查询本学院发布人活动
 - `GET /api/activities/stats`：活动状态统计
 - `GET /api/activities/{id}`：查看活动详情
 - `PUT /api/activities/{id}`：更新活动草稿
@@ -168,6 +209,8 @@ cd android
 - `POST /api/activities/{id}/check-in/registrations/{registrationId}`：工作人员人工补签
 - `DELETE /api/activities/{id}/check-in/registrations/{registrationId}`：撤销误签
 - `GET /api/activities/{id}/check-in/export`：导出 UTF-8 CSV 电子签到表
+- `GET /api/system/health`：数据库及应用健康检查
+- `GET /api/audit-logs`：学院审核老师或领导查看本学院操作留痕
 
 学生报名及签到数据保存在 `activity_registration` 表中，活动与学生组合具有唯一约束，避免重复报名；取消后重新报名会复用原记录并更新状态。签到记录包含签到时间、方式和操作人，便于后续核对。
 
@@ -175,7 +218,7 @@ cd android
 
 ## 学校统一身份认证接入
 
-后续接入学校认证时，将学校返回的稳定用户标识写入 `app_user.external_subject`，并把 `auth_source` 设置为 `SCHOOL_SSO`。认证回调只需要完成“学校身份 → 本地用户”的查找或创建，之后继续签发当前系统的会话令牌；活动、审批和报名接口无需改造。
+企业微信 OAuth 已使用同一套外部身份映射机制。后续接入学校认证时，将学校返回的稳定用户标识写入 `app_user.external_subject`，并把 `auth_source` 设置为 `SCHOOL_SSO`。认证回调只需要完成“学校身份 → 本地用户”的查找，之后继续签发当前系统的会话令牌；活动、审批和报名接口无需改造。角色仍由本系统预先配置，不根据外部返回值自动提权。
 
 ## 测试方案
 
@@ -189,6 +232,7 @@ cd android
 | 账号 | 密码 | 测试角色 |
 | --- | --- | --- |
 | `publisher` | `123456` | 活动发布人 |
+| `publisher2` | `123456` | 同学院第二位活动发布人 |
 | `reviewer` | `123456` | 学院审核老师 |
 | `leader` | `123456` | 学院领导 |
 | `student` | `123456` | 学生 |
@@ -205,7 +249,7 @@ cd ../frontend
 npm run build
 ```
 
-后端自动化测试覆盖：登录与会话、活动草稿与两级审批、相对日期换算、报名两种模式、签到与人数限制、AI/生图运行时配置、企微群范围校验及通知重试。当前基线为 23 项测试全部通过，前端生产构建无错误。
+后端自动化测试覆盖：登录与会话、活动草稿与两级审批、学院协作边界、公文链接提取与白名单、相对日期换算、报名两种模式、签到与人数限制、AI/生图运行时配置、企微群范围校验及通知重试。当前基线为 28 项测试全部通过，前端生产构建无错误。
 
 ### 3. 四角色主流程验收
 
@@ -235,7 +279,7 @@ npm run build
 | 人数已满 | 超过活动人数上限继续报名 | 系统拒绝报名，不出现超额人数 |
 | 重复报名 | 同一学生重复提交 | 不生成重复记录 |
 
-发布人进入“报名管理”时应能看到报名学生、申请时间、审核状态、剩余名额和审核意见。当前“活动管理”按创建人隔离，同事创建的草稿或审批中活动不会显示在本人管理列表；所有已正式发布活动会显示在活动广场。
+发布人进入“报名管理”时应能看到报名学生、申请时间、审核状态、剩余名额和审核意见。“活动管理”可切换到“本学院”查看同事创建的活动，但报名管理、编辑、删除、提交和发布仍只允许原创建人操作；所有已正式发布活动会显示在活动广场。
 
 ### 6. 入场签到与导出
 
@@ -270,6 +314,6 @@ npm run build
 - 数据重启后不丢失，权限边界有效，浏览器控制台无阻断性错误。
 - 涉及真实群消息、生产域名或学校身份数据的测试，必须使用明确授权的测试环境。
 
-当前版本用于课程项目原型。正式部署到企业微信前，还需接入企业微信 OAuth、从组织通讯录映射学院与角色，并完善文件存储和生产级消息通知。
+当前版本用于课程项目原型。企业微信 OAuth 和公文链接导入代码已在本地完成，但启用前仍需学校提供真实配置与账号映射；正式使用还需完成 HTTPS、组织通讯录同步、文件存储和生产级运行监控。
 
 更完整的完成情况、线上状态和后续安排见 [`docs/CURRENT_PROGRESS.md`](docs/CURRENT_PROGRESS.md)。
