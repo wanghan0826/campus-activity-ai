@@ -119,13 +119,13 @@ export default function StudentActivities({ section = 'activities', onNavigate }
     }
   }
 
-  const checkIn = async (activity, code) => {
+  const checkIn = async (activity, payload) => {
     setActionId(activity.id)
     setCheckInError('')
     setError('')
     setSuccess('')
     try {
-      const updated = await studentCheckIn(activity.id, code)
+      const updated = await studentCheckIn(activity.id, payload)
       updateActivity(updated)
       setCheckInTarget(null)
       setSuccess('签到成功，祝你活动愉快')
@@ -198,7 +198,7 @@ export default function StudentActivities({ section = 'activities', onNavigate }
       )}
 
       {detail && <ActivityDetailDialog activity={detail} busy={actionId === detail.id} onClose={() => setDetail(null)} onRegister={() => register(detail)} onCancel={() => cancel(detail)} onCheckIn={() => { setCheckInError(''); setCheckInTarget(detail) }} />}
-      {checkInTarget && <CheckInDialog activity={checkInTarget} busy={actionId === checkInTarget.id} error={checkInError} onClose={() => setCheckInTarget(null)} onConfirm={(code) => checkIn(checkInTarget, code)} />}
+      {checkInTarget && <CheckInDialog activity={checkInTarget} busy={actionId === checkInTarget.id} error={checkInError} onClose={() => setCheckInTarget(null)} onConfirm={(payload) => checkIn(checkInTarget, payload)} />}
     </div>
   )
 }
@@ -246,10 +246,10 @@ function ActivityDetailDialog({ activity, busy, onClose, onRegister, onCancel, o
 function RegistrationAction({ activity, busy, onRegister, onCancel, onCheckIn }) {
   const active = ['PENDING', 'APPROVED'].includes(activity.registrationStatus)
   if (activity.checkedIn) {
-    return <div className="rounded-xl bg-emerald-50 px-4 py-3 text-center text-sm font-bold text-emerald-700">✓ 已完成签到{activity.checkedInAt ? ` · ${formatDate(activity.checkedInAt)}` : ''}</div>
+    return <div className="rounded-xl bg-emerald-50 px-4 py-3 text-center text-sm font-bold text-emerald-700">✓ 已完成签到{activity.checkedInAt ? ` · ${formatDate(activity.checkedInAt)}` : ''}{activity.checkInDistanceMeters != null ? ` · 距签到点 ${activity.checkInDistanceMeters} 米` : ''}</div>
   }
   if (active) {
-    return <div><div className="mb-2 text-center text-xs text-stone-400">{activity.checkInNotice}</div><div className={`grid gap-2 ${activity.canCheckIn ? 'grid-cols-2' : 'grid-cols-1'}`}>{activity.canCheckIn && <button type="button" disabled={busy} onClick={onCheckIn} className="min-h-11 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50">现场签到</button>}<button type="button" disabled={busy} onClick={onCancel} className="min-h-11 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 disabled:opacity-50">{busy ? '正在处理…' : '取消报名'}</button></div></div>
+    return <div><div className="mb-2 text-center text-xs text-stone-400">{activity.checkInNotice}</div><div className={`grid gap-2 ${activity.canCheckIn ? 'grid-cols-2' : 'grid-cols-1'}`}>{activity.canCheckIn && <button type="button" disabled={busy} onClick={onCheckIn} className="min-h-11 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50">{activity.checkInMode === 'LOCATION' ? '雷达签到' : '现场签到'}</button>}<button type="button" disabled={busy} onClick={onCancel} className="min-h-11 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 disabled:opacity-50">{busy ? '正在处理…' : '取消报名'}</button></div></div>
   }
   if (activity.registrationStatus === 'REJECTED') {
     return <div className="space-y-2"><div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs leading-5 text-red-700"><span className="font-bold">审核未通过</span>{activity.registrationReviewComment ? `：${activity.registrationReviewComment}` : ''}</div>{activity.canRegister ? <button type="button" disabled={busy} onClick={onRegister} className="min-h-11 w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50">{busy ? '正在提交…' : '重新申请'}</button> : <button type="button" disabled className="min-h-11 w-full rounded-xl bg-stone-100 px-4 py-2.5 text-sm font-bold text-stone-400">{activity.registrationNotice || '暂不可重新申请'}</button>}</div>
@@ -262,9 +262,39 @@ function RegistrationAction({ activity, busy, onRegister, onCancel, onCheckIn })
 
 function CheckInDialog({ activity, busy, error, onClose, onConfirm }) {
   const [code, setCode] = useState('')
+  const [locating, setLocating] = useState(false)
+  const [locationError, setLocationError] = useState('')
   const submit = (event) => {
     event.preventDefault()
-    if (/^\d{6}$/.test(code)) onConfirm(code)
+    if (/^\d{6}$/.test(code)) onConfirm({ code })
+  }
+  const locate = async () => {
+    setLocating(true)
+    setLocationError('')
+    try {
+      const position = await getBrowserLocation()
+      onConfirm({ latitude: position.coords.latitude, longitude: position.coords.longitude, accuracyMeters: position.coords.accuracy })
+    } catch (locationFailure) {
+      setLocationError(locationErrorMessage(locationFailure))
+    } finally {
+      setLocating(false)
+    }
+  }
+  if (activity.checkInMode === 'LOCATION') {
+    return (
+      <div className="fixed inset-0 z-[60] flex items-end bg-stone-950/60 p-0 backdrop-blur-sm sm:grid sm:place-items-center sm:p-4" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+        <div className="w-full max-w-md rounded-t-3xl bg-white p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-2xl sm:rounded-3xl">
+          <div className="relative mx-auto grid h-36 w-36 place-items-center overflow-hidden rounded-full bg-emerald-50 ring-1 ring-emerald-100">
+            <span className="absolute h-24 w-24 rounded-full border border-emerald-300/70" /><span className="absolute h-14 w-14 rounded-full border border-emerald-400/80" /><span className="absolute h-px w-full bg-emerald-200" /><span className="absolute h-full w-px bg-emerald-200" />
+            <span className="relative grid h-10 w-10 place-items-center rounded-full bg-emerald-600 text-lg text-white shadow-lg">⌖</span>
+          </div>
+          <h2 className="mt-5 text-center text-xl font-bold text-stone-900">雷达定位签到</h2>
+          <p className="mt-2 text-center text-sm leading-6 text-stone-500">到达活动现场后获取一次定位，系统只记录你与签到点的距离。</p>
+          {(locationError || error) && <div role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{locationError || error}</div>}
+          <div className="mt-5 grid grid-cols-2 gap-2"><button type="button" onClick={onClose} className="min-h-11 rounded-xl px-4 text-sm font-bold text-stone-500 hover:bg-stone-100">取消</button><button type="button" disabled={busy || locating} onClick={locate} className="min-h-11 rounded-xl bg-emerald-600 px-4 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-40">{busy || locating ? '正在定位…' : '开始雷达签到'}</button></div>
+        </div>
+      </div>
+    )
   }
   return (
     <div className="fixed inset-0 z-[60] flex items-end bg-stone-950/60 p-0 backdrop-blur-sm sm:grid sm:place-items-center sm:p-4" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
@@ -278,6 +308,25 @@ function CheckInDialog({ activity, busy, error, onClose, onConfirm }) {
       </form>
     </div>
   )
+}
+
+function getBrowserLocation() {
+  if (!window.isSecureContext || !navigator.geolocation) {
+    return Promise.reject(new Error('SECURE_CONTEXT_REQUIRED'))
+  }
+  return new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, {
+    enableHighAccuracy: true,
+    timeout: 15000,
+    maximumAge: 0,
+  }))
+}
+
+function locationErrorMessage(error) {
+  if (error?.message === 'SECURE_CONTEXT_REQUIRED') return '当前入口暂不支持定位，请使用 HTTPS 地址打开平台'
+  if (error?.code === 1) return '定位权限未开启，请在浏览器设置中允许访问位置'
+  if (error?.code === 2) return '暂时无法获取位置，请打开手机定位后重试'
+  if (error?.code === 3) return '定位超时，请移动到开阔处后重试'
+  return error?.message || '定位失败，请稍后重试'
 }
 
 function RegistrationBadge({ status }) {

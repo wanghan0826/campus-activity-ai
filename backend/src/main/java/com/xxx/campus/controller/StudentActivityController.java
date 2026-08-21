@@ -65,6 +65,6 @@ public class StudentActivityController {
             @PathVariable Long activityId,
             @Valid @RequestBody CheckInRequest request,
             @AuthenticationPrincipal AuthenticatedUser user) {
-        return ResponseEntity.ok(studentActivityService.checkIn(activityId, user.userId(), request.getCode()));
+        return ResponseEntity.ok(studentActivityService.checkIn(activityId, user.userId(), request));
     }
 }

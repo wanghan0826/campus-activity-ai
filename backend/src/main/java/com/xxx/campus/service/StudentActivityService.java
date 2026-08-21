@@ -2,6 +2,7 @@ package com.xxx.campus.service;
 
 import com.xxx.campus.model.Activity;
 import com.xxx.campus.model.ActivityRegistration;
+import com.xxx.campus.model.CheckInRequest;
 import com.xxx.campus.model.StudentActivityView;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -31,6 +32,7 @@ public class StudentActivityService {
 
     private final ActivityRepository activityRepository;
     private final ActivityRegistrationRepository registrationRepository;
+    private final WeComMessageService weComMessageService;
 
     @Transactional(readOnly = true)
     public Page<StudentActivityView> listPublishedActivities(String studentId, String category, String keyword, int page, int size) {
@@ -82,11 +84,14 @@ public class StudentActivityService {
         registration.setCheckedInAt(null);
         registration.setCheckInMethod(null);
         registration.setCheckedInBy(null);
+        registration.setCheckInDistanceMeters(null);
+        registration.setCheckInAccuracyMeters(null);
         registration.setReviewedAt(null);
         registration.setReviewedBy(null);
         registration.setReviewComment(null);
         registrationRepository.save(registration);
         registrationRepository.flush();
+        weComMessageService.notifyRegistrationCreated(activity, studentId, STATUS_APPROVED.equals(nextStatus));
         return toView(activity, studentId);
     }
 
@@ -111,6 +116,13 @@ public class StudentActivityService {
 
     @Transactional
     public StudentActivityView checkIn(Long activityId, String studentId, String code) {
+        CheckInRequest request = new CheckInRequest();
+        request.setCode(code);
+        return checkIn(activityId, studentId, request);
+    }
+
+    @Transactional
+    public StudentActivityView checkIn(Long activityId, String studentId, CheckInRequest request) {
         Activity activity = activityRepository.findByIdForUpdate(activityId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "活动不存在"));
         ensurePublished(activity);
@@ -122,18 +134,24 @@ public class StudentActivityService {
         if (Boolean.TRUE.equals(registration.getCheckedIn())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "你已经完成签到");
         }
-        if (!"QR".equals(activity.getCheckInMode())) {
+        if (!Set.of("QR", "LOCATION").contains(activity.getCheckInMode())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "请到现场工作人员处签到");
         }
         if (!Boolean.TRUE.equals(activity.getCheckInOpen())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "签到尚未开放");
         }
-        if (!sameCode(activity.getCheckInCode(), code)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "签到码不正确");
+        if ("QR".equals(activity.getCheckInMode())) {
+            if (request == null || !sameCode(activity.getCheckInCode(), request.getCode())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "签到码不正确");
+            }
+            registration.setCheckInMethod("SELF_CODE");
+            registration.setCheckInDistanceMeters(null);
+            registration.setCheckInAccuracyMeters(null);
+        } else {
+            verifyLocationCheckIn(activity, request, registration);
         }
         registration.setCheckedIn(true);
         registration.setCheckedInAt(LocalDateTime.now());
-        registration.setCheckInMethod("SELF_CODE");
         registration.setCheckedInBy(studentId);
         registrationRepository.save(registration);
         return toView(activity, studentId);
@@ -183,6 +201,7 @@ public class StudentActivityService {
                 .registrationNotice(availability.notice())
                 .checkedIn(registration != null && Boolean.TRUE.equals(registration.getCheckedIn()))
                 .checkedInAt(registration == null ? null : registration.getCheckedInAt())
+                .checkInDistanceMeters(registration == null ? null : registration.getCheckInDistanceMeters())
                 .canCheckIn(checkInAvailability.canCheckIn())
                 .checkInNotice(checkInAvailability.notice())
                 .build();
@@ -204,7 +223,49 @@ public class StudentActivityService {
         if (!Boolean.TRUE.equals(activity.getCheckInOpen())) {
             return new CheckInAvailability(false, "签到尚未开放");
         }
-        return new CheckInAvailability(true, "输入现场签到码完成签到");
+        return "LOCATION".equals(activity.getCheckInMode())
+                ? new CheckInAvailability(true, "到达活动现场后进行雷达签到")
+                : new CheckInAvailability(true, "输入现场签到码完成签到");
+    }
+
+    private void verifyLocationCheckIn(Activity activity, CheckInRequest request, ActivityRegistration registration) {
+        if (activity.getCheckInLatitude() == null || activity.getCheckInLongitude() == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "现场签到点尚未设置");
+        }
+        if (request == null || request.getLatitude() == null || request.getLongitude() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "请授权定位后再签到");
+        }
+        if (request.getAccuracyMeters() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "定位精度数据缺失，请重新定位");
+        }
+        double accuracy = request.getAccuracyMeters();
+        int radius = activity.getCheckInRadiusMeters() == null ? 100 : activity.getCheckInRadiusMeters();
+        double maximumAccuracy = Math.max(100d, radius * 2d);
+        if (accuracy > maximumAccuracy) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "当前定位精度较低，请移动到开阔处后重试");
+        }
+        double distance = distanceMeters(
+                activity.getCheckInLatitude(), activity.getCheckInLongitude(),
+                request.getLatitude(), request.getLongitude());
+        if (distance > radius) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "你距离签到点约" + Math.round(distance) + "米，需进入" + radius + "米范围内");
+        }
+        registration.setCheckInMethod("SELF_LOCATION");
+        registration.setCheckInDistanceMeters((int) Math.round(distance));
+        registration.setCheckInAccuracyMeters(accuracy);
+    }
+
+    private double distanceMeters(double latitude1, double longitude1, double latitude2, double longitude2) {
+        double latitudeDelta = Math.toRadians(latitude2 - latitude1);
+        double longitudeDelta = Math.toRadians(longitude2 - longitude1);
+        double firstLatitude = Math.toRadians(latitude1);
+        double secondLatitude = Math.toRadians(latitude2);
+        double a = Math.sin(latitudeDelta / 2) * Math.sin(latitudeDelta / 2)
+                + Math.cos(firstLatitude) * Math.cos(secondLatitude)
+                * Math.sin(longitudeDelta / 2) * Math.sin(longitudeDelta / 2);
+        a = Math.min(1d, Math.max(0d, a));
+        return 6_371_000d * 2d * Math.atan2(Math.sqrt(a), Math.sqrt(1d - a));
     }
 
     private RegistrationAvailability availability(Activity activity, String registrationStatus) {

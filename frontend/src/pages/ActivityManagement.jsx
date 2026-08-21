@@ -26,10 +26,10 @@ const FILTERS = [
 
 const CATEGORY_LABELS = { ART: '艺术类', SPORTS: '艺体类', PRACTICE: '实践类', LIFE: '生活类', FEATURE: '特色类' }
 
-export default function ActivityManagement({ user, onCreate, onEdit, onCheckIn, onRegistrations }) {
+export default function ActivityManagement({ user, defaultScope = 'MINE', readOnly = false, onCreate, onEdit, onCheckIn, onRegistrations }) {
   const [activities, setActivities] = useState([])
   const [stats, setStats] = useState({})
-  const [scope, setScope] = useState('MINE')
+  const [scope, setScope] = useState(defaultScope)
   const [status, setStatus] = useState('ALL')
   const [keyword, setKeyword] = useState('')
   const [loading, setLoading] = useState(true)
@@ -67,6 +67,7 @@ export default function ActivityManagement({ user, onCreate, onEdit, onCheckIn, 
   ], [scope, stats])
 
   const handleDuplicate = async (activity) => {
+    if (readOnly || !onEdit) return
     setActionId(activity.id)
     try {
       const copy = await duplicateActivity(activity.id)
@@ -80,6 +81,7 @@ export default function ActivityManagement({ user, onCreate, onEdit, onCheckIn, 
   }
 
   const handleDelete = async (activity) => {
+    if (readOnly) return
     if (!window.confirm(`确定删除草稿“${activity.title || '未命名活动'}”吗？`)) return
     setActionId(activity.id)
     try {
@@ -93,6 +95,7 @@ export default function ActivityManagement({ user, onCreate, onEdit, onCheckIn, 
   }
 
   const handlePublish = async (activity) => {
+    if (readOnly) return
     const targetNames = (activity.notificationTargets || []).map((target) => target.groupName).filter(Boolean)
     const notice = targetNames.length ? `\n发布后将通知：${targetNames.join('、')}` : ''
     if (!window.confirm(`“${activity.title || '未命名活动'}”已完成两级审批，确定发布到学生端吗？${notice}`)) return
@@ -109,6 +112,7 @@ export default function ActivityManagement({ user, onCreate, onEdit, onCheckIn, 
   }
 
   const handleRetryNotification = async (activity) => {
+    if (readOnly) return
     if (!window.confirm(`确定重新向“${activity.title || '未命名活动'}”选择的群聊发送通知吗？`)) return
     setActionId(activity.id)
     setError('')
@@ -126,22 +130,24 @@ export default function ActivityManagement({ user, onCreate, onEdit, onCheckIn, 
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">{scope === 'COLLEGE' ? '本学院活动' : '我的活动'}</h1>
+          <h1 className="text-xl font-bold text-gray-900">{readOnly ? '活动列表' : (scope === 'COLLEGE' ? '本学院活动' : '我的活动')}</h1>
           <p className="text-sm text-gray-500 mt-1">共 {stats.ALL || 0} 个活动 · 草稿 {stats.DRAFT || 0} · 审批中 {stats.PENDING_APPROVAL || 0} · 已发布 {stats.PUBLISHED || 0}</p>
         </div>
         <div className="flex gap-2">
           <button className="btn-secondary" onClick={() => downloadCsv(activities)}>导出 CSV</button>
-          <button className="btn-primary" onClick={onCreate}>+ 创建活动</button>
+          {!readOnly && onCreate && <button className="btn-primary" onClick={onCreate}>+ 创建活动</button>}
         </div>
       </div>
 
       <div className="admin-card mb-6" style={{ padding: '12px 16px' }}>
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
           <div className="space-y-2">
-            <div className="inline-flex rounded border border-gray-200 bg-gray-50 p-0.5">
-              <button type="button" onClick={() => setScope('MINE')} className={`rounded px-3 py-1 text-xs font-semibold ${scope === 'MINE' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'}`}>我的活动</button>
-              <button type="button" onClick={() => setScope('COLLEGE')} className={`rounded px-3 py-1 text-xs font-semibold ${scope === 'COLLEGE' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'}`}>本学院</button>
-            </div>
+            {!readOnly && (
+              <div className="inline-flex rounded border border-gray-200 bg-gray-50 p-0.5">
+                <button type="button" onClick={() => setScope('MINE')} className={`rounded px-3 py-1 text-xs font-semibold ${scope === 'MINE' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'}`}>我的活动</button>
+                <button type="button" onClick={() => setScope('COLLEGE')} className={`rounded px-3 py-1 text-xs font-semibold ${scope === 'COLLEGE' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'}`}>本学院</button>
+              </div>
+            )}
             <div className="flex gap-1.5 flex-wrap">
               {FILTERS.map(([k, label]) => (
                 <button key={k} onClick={() => setStatus(k)} className={`px-2.5 py-1 text-xs font-medium rounded border transition ${status === k ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}>
@@ -184,13 +190,13 @@ export default function ActivityManagement({ user, onCreate, onEdit, onCheckIn, 
                   <td>
                     <div className="flex gap-1">
                       <button onClick={() => setPreview(a)} className="btn-secondary btn-sm">查看</button>
-                      {a.ownedByCurrentUser !== false && ['PUBLISHED','OFFLINE'].includes(a.status) && a.registrationRequired !== false && <button onClick={() => onRegistrations(a)} className="btn-secondary btn-sm">报名管理</button>}
-                      {a.ownedByCurrentUser !== false && ['PUBLISHED','OFFLINE'].includes(a.status) && <button onClick={() => onCheckIn(a)} className="btn-secondary btn-sm">签到表</button>}
-                      {a.ownedByCurrentUser !== false && ['DRAFT','REJECTED'].includes(a.status) && <button onClick={() => onEdit(a)} className="btn-secondary btn-sm">编辑</button>}
-                      {a.ownedByCurrentUser !== false && a.status === 'APPROVED' && <button disabled={actionId === a.id} onClick={() => handlePublish(a)} className="btn-primary btn-sm">发布</button>}
-                      {a.ownedByCurrentUser !== false && a.status === 'PUBLISHED' && ['FAILED','PARTIAL'].includes(a.notificationDeliveryStatus) && <button disabled={actionId === a.id} onClick={() => handleRetryNotification(a)} className="btn-secondary btn-sm">重试通知</button>}
-                      {a.ownedByCurrentUser !== false && <button disabled={actionId === a.id} onClick={() => handleDuplicate(a)} className="btn-secondary btn-sm">复制</button>}
-                      {a.ownedByCurrentUser !== false && ['DRAFT','REJECTED'].includes(a.status) && <button onClick={() => handleDelete(a)} className="btn-danger btn-sm">删除</button>}
+                      {!readOnly && a.ownedByCurrentUser !== false && ['PUBLISHED','OFFLINE'].includes(a.status) && a.registrationRequired !== false && <button onClick={() => onRegistrations(a)} className="btn-secondary btn-sm">报名管理</button>}
+                      {!readOnly && a.ownedByCurrentUser !== false && ['PUBLISHED','OFFLINE'].includes(a.status) && <button onClick={() => onCheckIn(a)} className="btn-secondary btn-sm">签到表</button>}
+                      {!readOnly && a.ownedByCurrentUser !== false && ['DRAFT','REJECTED'].includes(a.status) && <button onClick={() => onEdit(a)} className="btn-secondary btn-sm">编辑</button>}
+                      {!readOnly && a.ownedByCurrentUser !== false && a.status === 'APPROVED' && <button disabled={actionId === a.id} onClick={() => handlePublish(a)} className="btn-primary btn-sm">发布</button>}
+                      {!readOnly && a.ownedByCurrentUser !== false && a.status === 'PUBLISHED' && ['FAILED','PARTIAL'].includes(a.notificationDeliveryStatus) && <button disabled={actionId === a.id} onClick={() => handleRetryNotification(a)} className="btn-secondary btn-sm">重试通知</button>}
+                      {!readOnly && a.ownedByCurrentUser !== false && <button disabled={actionId === a.id} onClick={() => handleDuplicate(a)} className="btn-secondary btn-sm">复制</button>}
+                      {!readOnly && a.ownedByCurrentUser !== false && ['DRAFT','REJECTED'].includes(a.status) && <button onClick={() => handleDelete(a)} className="btn-danger btn-sm">删除</button>}
                     </div>
                   </td>
                 </tr>

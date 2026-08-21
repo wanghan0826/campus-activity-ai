@@ -244,8 +244,8 @@ export async function cancelActivityRegistration(id) {
   return data
 }
 
-export async function studentCheckIn(id, code) {
-  const { data } = await api.post(`/student/activities/${id}/check-in`, { code })
+export async function studentCheckIn(id, payload) {
+  const { data } = await api.post(`/student/activities/${id}/check-in`, payload)
   return data
 }
 
@@ -269,8 +269,8 @@ export async function getCheckInRoster(activityId) {
   return data
 }
 
-export async function openActivityCheckIn(activityId) {
-  const { data } = await api.post(`/activities/${activityId}/check-in/open`)
+export async function openActivityCheckIn(activityId, payload = {}) {
+  const { data } = await api.post(`/activities/${activityId}/check-in/open`, payload)
   return data
 }
 

@@ -55,6 +55,10 @@ public class CheckInManagementService {
                 .checkInOpen(Boolean.TRUE.equals(activity.getCheckInOpen()))
                 .checkInCode(activity.getCheckInCode())
                 .checkInOpenedAt(activity.getCheckInOpenedAt())
+                .checkInLatitude(activity.getCheckInLatitude())
+                .checkInLongitude(activity.getCheckInLongitude())
+                .checkInRadiusMeters(activity.getCheckInRadiusMeters())
+                .checkInLocationAccuracyMeters(activity.getCheckInLocationAccuracyMeters())
                 .totalCount(approved)
                 .approvedCount(approved)
                 .pendingCount(pending)
@@ -68,6 +72,11 @@ public class CheckInManagementService {
 
     @Transactional
     public CheckInRosterView openCheckIn(Long activityId, String creatorId) {
+        return openCheckIn(activityId, creatorId, null);
+    }
+
+    @Transactional
+    public CheckInRosterView openCheckIn(Long activityId, String creatorId, OpenCheckInRequest request) {
         Activity activity = getOwnedActivity(activityId, creatorId);
         if (!"PUBLISHED".equals(activity.getStatus())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "只有已发布活动可以开启签到");
@@ -75,12 +84,21 @@ public class CheckInManagementService {
         if ("NONE".equals(activity.getCheckInMode())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "该活动设置为无需签到");
         }
+        if ("LOCATION".equals(activity.getCheckInMode())) {
+            if (request == null || request.getLatitude() == null || request.getLongitude() == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "请先获取现场定位再开启雷达签到");
+            }
+            activity.setCheckInLatitude(request.getLatitude());
+            activity.setCheckInLongitude(request.getLongitude());
+            activity.setCheckInRadiusMeters(request.getRadiusMeters() == null ? 100 : request.getRadiusMeters());
+            activity.setCheckInLocationAccuracyMeters(request.getAccuracyMeters());
+        }
         if (!Boolean.TRUE.equals(activity.getCheckInOpen())) {
             activity.setCheckInCode("QR".equals(activity.getCheckInMode()) ? generateCode() : null);
             activity.setCheckInOpenedAt(LocalDateTime.now());
             activity.setCheckInOpen(true);
-            activityRepository.save(activity);
         }
+        activityRepository.save(activity);
         return getRoster(activityId, creatorId);
     }
 
@@ -104,6 +122,8 @@ public class CheckInManagementService {
         registration.setCheckedInAt(LocalDateTime.now());
         registration.setCheckInMethod("MANUAL");
         registration.setCheckedInBy(creatorId);
+        registration.setCheckInDistanceMeters(null);
+        registration.setCheckInAccuracyMeters(null);
         registrationRepository.save(registration);
         return getRoster(activityId, creatorId);
     }
@@ -116,6 +136,8 @@ public class CheckInManagementService {
         registration.setCheckedInAt(null);
         registration.setCheckInMethod(null);
         registration.setCheckedInBy(null);
+        registration.setCheckInDistanceMeters(null);
+        registration.setCheckInAccuracyMeters(null);
         registrationRepository.save(registration);
         return getRoster(activityId, creatorId);
     }
@@ -124,7 +146,7 @@ public class CheckInManagementService {
     public byte[] exportCsv(Long activityId, String creatorId) {
         CheckInRosterView roster = getRoster(activityId, creatorId);
         StringBuilder csv = new StringBuilder("\uFEFF");
-        csv.append("序号,学号/工号,姓名,学院,报名状态,报名时间,签到状态,签到时间,签到方式,现场签名\r\n");
+        csv.append("序号,学号/工号,姓名,学院,报名状态,报名时间,签到状态,签到时间,签到方式,签到距离,定位精度,现场签名\r\n");
         int index = 1;
         for (RegistrationRosterItem item : roster.getRegistrations()) {
             csv.append(index++).append(',')
@@ -136,6 +158,8 @@ public class CheckInManagementService {
                     .append(cell(item.isCheckedIn() ? "已签到" : "未签到")).append(',')
                     .append(cell(formatTime(item.getCheckedInAt()))).append(',')
                     .append(cell(methodLabel(item.getCheckInMethod()))).append(',')
+                    .append(cell(distanceLabel(item.getCheckInDistanceMeters()))).append(',')
+                    .append(cell(accuracyLabel(item.getCheckInAccuracyMeters()))).append(',')
                     .append("\r\n");
         }
         return csv.toString().getBytes(StandardCharsets.UTF_8);
@@ -154,6 +178,8 @@ public class CheckInManagementService {
                 .checkedInAt(registration.getCheckedInAt())
                 .checkInMethod(registration.getCheckInMethod())
                 .checkedInBy(registration.getCheckedInBy())
+                .checkInDistanceMeters(registration.getCheckInDistanceMeters())
+                .checkInAccuracyMeters(registration.getCheckInAccuracyMeters())
                 .reviewedAt(registration.getReviewedAt())
                 .reviewedBy(registration.getReviewedBy())
                 .reviewComment(registration.getReviewComment())
@@ -200,8 +226,17 @@ public class CheckInManagementService {
 
     private String methodLabel(String method) {
         if ("SELF_CODE".equals(method)) return "学生现场签到";
+        if ("SELF_LOCATION".equals(method)) return "雷达定位签到";
         if ("MANUAL".equals(method)) return "工作人员签到";
         return "";
+    }
+
+    private String distanceLabel(Integer distanceMeters) {
+        return distanceMeters == null ? "" : distanceMeters + "米";
+    }
+
+    private String accuracyLabel(Double accuracyMeters) {
+        return accuracyMeters == null ? "" : Math.round(accuracyMeters) + "米";
     }
 
     private String cell(String value) {

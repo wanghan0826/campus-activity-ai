@@ -25,6 +25,7 @@ public class RegistrationManagementService {
     private final ActivityRepository activityRepository;
     private final ActivityRegistrationRepository registrationRepository;
     private final UserAccountRepository userAccountRepository;
+    private final WeComMessageService weComMessageService;
 
     @Transactional(readOnly = true)
     public RegistrationManagementView getRegistrations(Long activityId, String creatorId) {
@@ -78,6 +79,7 @@ public class RegistrationManagementService {
         registration.setStatus(StudentActivityService.STATUS_APPROVED);
         applyReview(registration, creatorId, comment);
         registrationRepository.save(registration);
+        weComMessageService.notifyRegistrationApproved(activity, registration.getStudentId());
         return getRegistrations(activityId, creatorId);
     }
 
@@ -92,6 +94,7 @@ public class RegistrationManagementService {
         registration.setStatus(StudentActivityService.STATUS_REJECTED);
         applyReview(registration, creatorId, comment);
         registrationRepository.save(registration);
+        weComMessageService.notifyRegistrationRejected(activity, registration.getStudentId(), comment);
         return getRegistrations(activityId, creatorId);
     }
 

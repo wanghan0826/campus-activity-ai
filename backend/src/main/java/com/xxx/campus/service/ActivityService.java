@@ -32,7 +32,7 @@ public class ActivityService {
 
     private static final Set<String> ALLOWED_CATEGORIES = Set.of("ART", "SPORTS", "PRACTICE", "LIFE", "FEATURE");
     private static final Set<String> ALLOWED_RECOGNITION_TYPES = Set.of("NONE", "CREDIT", "VOLUNTEER", "BOTH");
-    private static final Set<String> ALLOWED_CHECK_IN_MODES = Set.of("QR", "MANUAL", "NONE");
+    private static final Set<String> ALLOWED_CHECK_IN_MODES = Set.of("QR", "LOCATION", "MANUAL", "NONE");
     private static final Set<String> EDITABLE_STATUSES = Set.of("DRAFT", "REJECTED");
     private static final List<String> MANAGED_STATUSES = List.of(
             "DRAFT", "PENDING_APPROVAL", "APPROVED", "PUBLISHED", "OFFLINE", "REJECTED"

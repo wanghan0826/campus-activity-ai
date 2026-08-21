@@ -28,6 +28,9 @@ public class WeComProperties {
     /** 是否启用消息通知 */
     private boolean notificationEnabled = true;
 
+    /** 测试环境映射：系统用户ID=企微UserId，多个映射用逗号或分号分隔。 */
+    private String userBindings;
+
     /** 是否启用日程同步 */
     private boolean calendarEnabled = true;
 

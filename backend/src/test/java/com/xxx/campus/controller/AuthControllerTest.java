@@ -45,6 +45,18 @@ class AuthControllerTest {
 
         mockMvc.perform(get("/api/student/activities"))
                 .andExpect(status().isUnauthorized());
+
+        String reviewerToken = login("reviewer", "123456", "COLLEGE_REVIEWER");
+        mockMvc.perform(get("/api/activities")
+                        .param("scope", "COLLEGE")
+                        .header("Authorization", "Bearer " + reviewerToken))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/activities")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}")
+                        .header("Authorization", "Bearer " + reviewerToken))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -95,6 +107,28 @@ class AuthControllerTest {
                         .header("Authorization", "Bearer " + reviewerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray());
+    }
+
+    @Test
+    void shouldAllowAuthenticatedAiUseButBlockRuntimeKeyManagement() throws Exception {
+        String studentToken = login("student", "123456", "STUDENT");
+
+        mockMvc.perform(post("/api/activities/parse")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}")
+                        .header("Authorization", "Bearer " + studentToken))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(post("/api/ai/images/generate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}")
+                        .header("Authorization", "Bearer " + studentToken))
+                .andExpect(status().isBadRequest());
+
+        String publisherToken = login("publisher", "123456", "PUBLISHER");
+        mockMvc.perform(get("/api/ai/settings")
+                        .header("Authorization", "Bearer " + publisherToken))
+                .andExpect(status().isForbidden());
     }
 
     private String login(String username, String password, String role) throws Exception {

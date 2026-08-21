@@ -50,6 +50,7 @@ wecom:
   secret: ${WECOM_SECRET:}
   base-url: ${WECOM_BASE_URL:https://qyapi.weixin.qq.com}
   notification-enabled: ${WECOM_NOTIFICATION_ENABLED:false}
+  user-bindings: ${WECOM_USER_BINDINGS:}
   calendar-enabled: ${WECOM_CALENDAR_ENABLED:false}
   group-notification-enabled: ${WECOM_GROUP_NOTIFICATION_ENABLED:true}
   organizer-userid: ${WECOM_ORGANIZER_USERID:}

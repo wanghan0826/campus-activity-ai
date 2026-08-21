@@ -19,6 +19,8 @@ public class RegistrationRosterItem {
     private LocalDateTime checkedInAt;
     private String checkInMethod;
     private String checkedInBy;
+    private Integer checkInDistanceMeters;
+    private Double checkInAccuracyMeters;
     private LocalDateTime reviewedAt;
     private String reviewedBy;
     private String reviewComment;

@@ -2,13 +2,16 @@ package com.xxx.campus.service;
 
 import com.xxx.campus.config.WeComProperties;
 import com.xxx.campus.model.Activity;
+import com.xxx.campus.model.UserAccount;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * 企业微信应用消息通知服务。
@@ -21,10 +24,14 @@ public class WeComMessageService {
 
     private final WeComClient weComClient;
     private final WeComProperties properties;
+    private final UserAccountRepository userAccountRepository;
 
-    public WeComMessageService(WeComClient weComClient, WeComProperties properties) {
+    public WeComMessageService(WeComClient weComClient,
+                               WeComProperties properties,
+                               UserAccountRepository userAccountRepository) {
         this.weComClient = weComClient;
         this.properties = properties;
+        this.userAccountRepository = userAccountRepository;
     }
 
     /**
@@ -80,14 +87,53 @@ public class WeComMessageService {
         sendTextMessage(activity.getCreatorId(), desc);
     }
 
+    /** 报名提交后通知学生；先到先得直接确认成功，审核制提示等待审核。 */
+    @Async
+    public void notifyRegistrationCreated(Activity activity, String studentId, boolean approved) {
+        if (!properties.isNotificationEnabled()) return;
+        String title = activity.getTitle() == null ? "校园活动" : activity.getTitle();
+        String status = approved ? "报名成功" : "报名申请已提交，等待发布人审核";
+        sendTextCard(
+                studentId,
+                approved ? "✅ 报名成功" : "📝 报名申请已提交",
+                "活动：" + title + "\n" + buildRegistrationDesc(activity, status),
+                frontendUrl()
+        );
+    }
+
+    /** 审核制报名通过后通知学生。 */
+    @Async
+    public void notifyRegistrationApproved(Activity activity, String studentId) {
+        if (!properties.isNotificationEnabled()) return;
+        String title = activity.getTitle() == null ? "校园活动" : activity.getTitle();
+        sendTextCard(
+                studentId,
+                "✅ 报名审核通过",
+                "活动：" + title + "\n" + buildRegistrationDesc(activity, "报名成功，请按时参加"),
+                frontendUrl()
+        );
+    }
+
+    /** 审核制报名驳回后通知学生，并附带原因。 */
+    @Async
+    public void notifyRegistrationRejected(Activity activity, String studentId, String reason) {
+        if (!properties.isNotificationEnabled()) return;
+        String title = activity.getTitle() == null ? "校园活动" : activity.getTitle();
+        String content = "活动：" + title + "\n状态：报名未通过";
+        if (reason != null && !reason.isBlank()) {
+            content += "\n原因：" + reason.trim();
+        }
+        sendTextCard(studentId, "报名审核结果", content, frontendUrl());
+    }
+
     /**
      * 发送文本消息。
      */
     private void sendTextMessage(String toUser, String content) {
-        // OAuth 接入前，测试用户发 @all
-        String target = (toUser == null || "test_teacher_001".equals(toUser)) ? "@all" : toUser;
+        Optional<String> target = resolveWeComUserId(toUser);
+        if (target.isEmpty()) return;
         Map<String, Object> body = Map.of(
-                "touser", target,
+                "touser", target.get(),
                 "msgtype", "text",
                 "agentid", Integer.parseInt(properties.getAgentId()),
                 "text", Map.of("content", content)
@@ -96,9 +142,10 @@ public class WeComMessageService {
     }
 
     private void sendTextCard(String toUser, String title, String desc, String url) {
-        String target = (toUser == null || "test_teacher_001".equals(toUser)) ? "@all" : toUser;
+        Optional<String> target = resolveWeComUserId(toUser);
+        if (target.isEmpty()) return;
         Map<String, Object> body = Map.of(
-                "touser", target,
+                "touser", target.get(),
                 "msgtype", "textcard",
                 "agentid", Integer.parseInt(properties.getAgentId()),
                 "textcard", Map.of(
@@ -109,6 +156,61 @@ public class WeComMessageService {
                 )
         );
         weComClient.postQuietly("/cgi-bin/message/send", body, "发送卡片通知");
+    }
+
+    private Optional<String> resolveWeComUserId(String systemUserId) {
+        if (systemUserId == null || systemUserId.isBlank()) {
+            log.warn("跳过企业微信通知：系统用户ID为空");
+            return Optional.empty();
+        }
+
+        Optional<UserAccount> account = userAccountRepository.findByUserId(systemUserId);
+        if (account.isPresent()) {
+            String boundUserId = account.get().getWecomUserId();
+            if (boundUserId != null && !boundUserId.isBlank()) {
+                return Optional.of(boundUserId.trim());
+            }
+            if ("WECOM".equals(account.get().getAuthSource())
+                    && account.get().getExternalSubject() != null
+                    && !account.get().getExternalSubject().isBlank()) {
+                return Optional.of(account.get().getExternalSubject().trim());
+            }
+        }
+
+        Optional<String> configured = configuredBinding(systemUserId);
+        if (configured.isPresent()) return configured;
+
+        log.warn("跳过企业微信通知：系统用户 {} 尚未绑定企微UserId", systemUserId);
+        return Optional.empty();
+    }
+
+    private Optional<String> configuredBinding(String systemUserId) {
+        String bindings = properties.getUserBindings();
+        if (bindings == null || bindings.isBlank()) return Optional.empty();
+        return Arrays.stream(bindings.split("[,;]"))
+                .map(String::trim)
+                .filter(item -> !item.isBlank())
+                .map(item -> item.split("=", 2))
+                .filter(parts -> parts.length == 2 && systemUserId.equals(parts[0].trim()))
+                .map(parts -> parts[1].trim())
+                .filter(value -> !value.isBlank())
+                .findFirst();
+    }
+
+    private String frontendUrl() {
+        return properties.getFrontendUrl() != null ? properties.getFrontendUrl() : "";
+    }
+
+    private String buildRegistrationDesc(Activity activity, String status) {
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MM-dd HH:mm");
+        StringBuilder sb = new StringBuilder("状态：").append(status);
+        if (activity.getStartTime() != null) {
+            sb.append("\n时间：").append(activity.getStartTime().format(fmt));
+        }
+        if (activity.getLocation() != null && !activity.getLocation().isBlank()) {
+            sb.append("\n地点：").append(activity.getLocation());
+        }
+        return sb.toString();
     }
 
     private String buildCardDesc(Activity activity) {

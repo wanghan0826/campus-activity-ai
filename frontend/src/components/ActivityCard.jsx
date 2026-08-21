@@ -606,7 +606,7 @@ function Field({ field, value, missing, onChange }) {
     </select>
   } else if (field.type === 'checkIn') {
     ctrl = <select value={value || 'QR'} onChange={e => onChange(e.target.value)} className={cls}>
-      <option value="QR">签到码</option><option value="MANUAL">人工签到</option><option value="NONE">无需签到</option>
+      <option value="QR">现场签到码</option><option value="LOCATION">雷达定位签到</option><option value="MANUAL">人工签到</option><option value="NONE">无需签到</option>
     </select>
   } else {
     ctrl = <input type={field.type || 'text'} min={field.type === 'number' ? 0 : undefined} step={field.step}

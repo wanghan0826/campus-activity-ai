@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { getCurrentUser, hasStoredAuthToken, logout } from './api/activity.js'
-import AiSettingsDialog from './components/AiSettingsDialog.jsx'
 import ApprovalWorkbench from './pages/ApprovalWorkbench.jsx'
 import ActivityManagement from './pages/ActivityManagement.jsx'
 import ActivitySquare from './pages/ActivitySquare.jsx'
@@ -25,7 +24,6 @@ export default function App() {
   const [registrationActivity, setRegistrationActivity] = useState(null)
   const [user, setUser] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
-  const [showAiSettings, setShowAiSettings] = useState(false)
 
   const isPublisher = user?.role === 'PUBLISHER'
   const isStudent = user?.role === 'STUDENT'
@@ -69,10 +67,10 @@ export default function App() {
             {isStudent && <NavBtn active={page === 'studentActivities'} onClick={() => navigate('studentActivities')}>活动广场</NavBtn>}
             {isStudent && <NavBtn active={page === 'studentRegistrations'} onClick={() => navigate('studentRegistrations')}>我的报名</NavBtn>}
             {isReviewer && <NavBtn active={page === 'approvals'} onClick={() => navigate('approvals')}>审批工作台</NavBtn>}
+            {isReviewer && <NavBtn active={page === 'manage'} onClick={() => navigate('manage')}>活动列表</NavBtn>}
           </nav>
         </div>
         <div className="flex items-center gap-3">
-          {isPublisher && <button className="btn-secondary btn-sm" onClick={() => setShowAiSettings(true)}>AI 设置</button>}
           <span className="text-sm text-gray-600">{user.displayName}</span>
           <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">{ROLE_LABELS[user.role] || user.role}</span>
           <button className="btn-secondary btn-sm" onClick={handleLogout}>退出</button>
@@ -90,13 +88,15 @@ export default function App() {
           <RegistrationManagement activity={registrationActivity} onBack={() => navigate('manage')} />
         ) : page === 'checkIn' && isPublisher && checkInActivity ? (
           <CheckInManagement activity={checkInActivity} onBack={() => navigate('manage')} />
-        ) : page === 'manage' && isPublisher ? (
+        ) : page === 'manage' && (isPublisher || isReviewer) ? (
           <ActivityManagement
             user={user}
-            onCreate={() => { setEditingActivity(null); navigate('create') }}
-            onEdit={(a) => { navigate('create'); setEditingActivity(a) }}
-            onCheckIn={(a) => { navigate('checkIn'); setCheckInActivity(a) }}
-            onRegistrations={(a) => { navigate('registration'); setRegistrationActivity(a) }}
+            defaultScope={isReviewer ? 'COLLEGE' : 'MINE'}
+            readOnly={isReviewer}
+            onCreate={isPublisher ? () => { setEditingActivity(null); navigate('create') } : undefined}
+            onEdit={isPublisher ? (a) => { navigate('create'); setEditingActivity(a) } : undefined}
+            onCheckIn={isPublisher ? (a) => { navigate('checkIn'); setCheckInActivity(a) } : undefined}
+            onRegistrations={isPublisher ? (a) => { navigate('registration'); setRegistrationActivity(a) } : undefined}
           />
         ) : (
           <ApprovalWorkbench identity={user} />
@@ -115,9 +115,13 @@ export default function App() {
           <MobNav active={page === 'studentActivities'} onClick={() => navigate('studentActivities')} icon="◇">广场</MobNav>
           <MobNav active={page === 'studentRegistrations'} onClick={() => navigate('studentRegistrations')} icon="◎">报名</MobNav>
         </nav>
+      ) : isReviewer ? (
+        <nav className="fixed inset-x-0 bottom-0 z-40 sm:hidden bg-white border-t border-gray-200 grid grid-cols-2 gap-1 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+          <MobNav active={page === 'approvals'} onClick={() => navigate('approvals')} icon="◎">审批</MobNav>
+          <MobNav active={page === 'manage'} onClick={() => navigate('manage')} icon="☰">活动</MobNav>
+        </nav>
       ) : null}
 
-      {showAiSettings && <AiSettingsDialog onClose={() => setShowAiSettings(false)} />}
     </div>
   )
 }

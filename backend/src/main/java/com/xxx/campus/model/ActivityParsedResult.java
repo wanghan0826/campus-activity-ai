@@ -39,7 +39,7 @@ public class ActivityParsedResult {
     private String recognitionType;               // NONE / CREDIT / VOLUNTEER / BOTH
     private BigDecimal secondClassCredits;         // 第二课堂学分
     private BigDecimal volunteerHours;             // 志愿服务时长
-    private String checkInMode;                    // QR / MANUAL / NONE
+    private String checkInMode;                    // QR / LOCATION / MANUAL / NONE
     private String participationRequirements;      // 参与及认定要求
     private Boolean hasPromoMaterial; // 是否有宣传品
     private Boolean promoApproved;

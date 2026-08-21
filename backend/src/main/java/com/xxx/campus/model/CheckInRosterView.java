@@ -18,6 +18,10 @@ public class CheckInRosterView {
     private boolean checkInOpen;
     private String checkInCode;
     private LocalDateTime checkInOpenedAt;
+    private Double checkInLatitude;
+    private Double checkInLongitude;
+    private Integer checkInRadiusMeters;
+    private Double checkInLocationAccuracyMeters;
     private long totalCount;
     private long approvedCount;
     private long pendingCount;

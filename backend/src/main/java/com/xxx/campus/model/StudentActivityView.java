@@ -45,6 +45,7 @@ public class StudentActivityView {
     private String registrationNotice;
     private boolean checkedIn;
     private LocalDateTime checkedInAt;
+    private Integer checkInDistanceMeters;
     private boolean canCheckIn;
     private String checkInNotice;
 }

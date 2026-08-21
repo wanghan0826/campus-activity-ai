@@ -42,12 +42,18 @@ public class ActivityRegistration {
     @Column(name = "checked_in_at")
     private LocalDateTime checkedInAt;
 
-    /** SELF_CODE：学生现场报码签到，MANUAL：工作人员后台签到。 */
+    /** SELF_CODE：学生现场报码签到，SELF_LOCATION：雷达定位签到，MANUAL：工作人员后台签到。 */
     @Column(name = "check_in_method", length = 20)
     private String checkInMethod;
 
     @Column(name = "checked_in_by", length = 100)
     private String checkedInBy;
+
+    @Column(name = "check_in_distance_meters")
+    private Integer checkInDistanceMeters;
+
+    @Column(name = "check_in_accuracy_meters")
+    private Double checkInAccuracyMeters;
 
     @Column(name = "reviewed_at")
     private LocalDateTime reviewedAt;

@@ -58,6 +58,10 @@ public class UserAccount {
     @Column(name = "external_subject", length = 200)
     private String externalSubject;
 
+    /** 企业微信成员 UserId；与登录来源解耦，保留本地测试账号登录能力。 */
+    @Column(name = "wecom_user_id", length = 200)
+    private String wecomUserId;
+
     @Column(nullable = false)
     private boolean enabled;
 

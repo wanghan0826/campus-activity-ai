@@ -92,6 +92,15 @@ public class Activity {
 
     private LocalDateTime checkInOpenedAt;
 
+    private Double checkInLatitude;
+
+    private Double checkInLongitude;
+
+    @Builder.Default
+    private Integer checkInRadiusMeters = 100;
+
+    private Double checkInLocationAccuracyMeters;
+
     @Column(length = 500)
     private String participationRequirements;
 

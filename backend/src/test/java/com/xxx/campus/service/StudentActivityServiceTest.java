@@ -2,6 +2,8 @@ package com.xxx.campus.service;
 
 import com.xxx.campus.model.Activity;
 import com.xxx.campus.model.ActivityParsedResult;
+import com.xxx.campus.model.CheckInRequest;
+import com.xxx.campus.model.OpenCheckInRequest;
 import com.xxx.campus.model.StudentActivityView;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -212,6 +214,51 @@ class StudentActivityServiceTest {
         var manual = checkInManagementService.manualCheckIn(
                 published.getId(), registrationId, "publisher_test_001");
         assertThat(manual.getRegistrations().get(0).getCheckInMethod()).isEqualTo("MANUAL");
+    }
+
+    @Test
+    void shouldSupportRadarLocationCheckInAndRejectStudentsOutsideRadius() {
+        ActivityParsedResult result = completeResult(false, 20);
+        result.setCheckInMode("LOCATION");
+        Activity published = publish(result);
+        studentActivityService.register(published.getId(), "student_001");
+
+        OpenCheckInRequest openRequest = new OpenCheckInRequest();
+        openRequest.setLatitude(23.129100d);
+        openRequest.setLongitude(113.264400d);
+        openRequest.setAccuracyMeters(12d);
+        openRequest.setRadiusMeters(100);
+        var opened = checkInManagementService.openCheckIn(
+                published.getId(), "publisher_test_001", openRequest);
+
+        assertThat(opened.isCheckInOpen()).isTrue();
+        assertThat(opened.getCheckInCode()).isNull();
+        assertThat(opened.getCheckInRadiusMeters()).isEqualTo(100);
+
+        CheckInRequest outside = new CheckInRequest();
+        outside.setLatitude(23.131100d);
+        outside.setLongitude(113.264400d);
+        outside.setAccuracyMeters(10d);
+        assertThatThrownBy(() -> studentActivityService.checkIn(
+                published.getId(), "student_001", outside))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("需进入100米范围内");
+
+        CheckInRequest inside = new CheckInRequest();
+        inside.setLatitude(23.129280d);
+        inside.setLongitude(113.264400d);
+        inside.setAccuracyMeters(8d);
+        StudentActivityView checkedIn = studentActivityService.checkIn(
+                published.getId(), "student_001", inside);
+
+        assertThat(checkedIn.isCheckedIn()).isTrue();
+        assertThat(checkedIn.getCheckInDistanceMeters()).isBetween(15, 30);
+        assertThat(checkInManagementService.getRoster(published.getId(), "publisher_test_001")
+                .getRegistrations()).singleElement().satisfies(item -> {
+                    assertThat(item.getCheckInMethod()).isEqualTo("SELF_LOCATION");
+                    assertThat(item.getCheckInDistanceMeters()).isBetween(15, 30);
+                    assertThat(item.getCheckInAccuracyMeters()).isEqualTo(8d);
+                });
     }
 
     private Activity publish(ActivityParsedResult result) {

@@ -17,6 +17,7 @@ const RECOGNITION_LABELS = {
 
 const CHECK_IN_LABELS = {
   QR: '现场签到码',
+  LOCATION: '雷达定位签到',
   MANUAL: '人工签到',
   NONE: '无需签到',
 }

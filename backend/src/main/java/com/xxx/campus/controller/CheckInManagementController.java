@@ -1,6 +1,7 @@
 package com.xxx.campus.controller;
 
 import com.xxx.campus.model.CheckInRosterView;
+import com.xxx.campus.model.OpenCheckInRequest;
 import com.xxx.campus.security.AuthenticatedUser;
 import com.xxx.campus.service.CheckInManagementService;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/activities/{activityId}/check-in")
@@ -27,8 +29,9 @@ public class CheckInManagementController {
     @PostMapping("/open")
     public ResponseEntity<CheckInRosterView> open(
             @PathVariable Long activityId,
+            @Valid @RequestBody(required = false) OpenCheckInRequest request,
             @AuthenticationPrincipal AuthenticatedUser user) {
-        return ResponseEntity.ok(checkInManagementService.openCheckIn(activityId, user.userId()));
+        return ResponseEntity.ok(checkInManagementService.openCheckIn(activityId, user.userId(), request));
     }
 
     @PostMapping("/close")
