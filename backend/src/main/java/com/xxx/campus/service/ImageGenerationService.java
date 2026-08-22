@@ -41,7 +41,7 @@ public class ImageGenerationService {
 
     public ImageGenerationResponse generate(String prompt) {
         if (!settings.isConfigured()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "请先在“AI 设置”中配置生图接口");
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "服务器尚未配置生图服务，请联系管理员");
         }
 
         Map<String, Object> requestBody = new LinkedHashMap<>();

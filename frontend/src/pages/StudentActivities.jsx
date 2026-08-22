@@ -145,7 +145,7 @@ export default function StudentActivities({ section = 'activities', onNavigate }
             <div className="relative max-w-2xl">
               <span className="inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold ring-1 ring-white/20">学生端 · 活动广场</span>
               <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">发现值得参加的校园活动</h1>
-              <p className="mt-3 text-sm leading-7 text-white/70 sm:text-base">浏览已通过学院审批并正式发布的活动，查看安排后在线完成报名。</p>
+              <p className="mt-3 text-sm leading-7 text-white/70 sm:text-base">浏览已通过学院审批并正式发布的活动，查看活动安排与参与方式。</p>
             </div>
           </section>
 
@@ -335,6 +335,7 @@ function RegistrationBadge({ status }) {
 }
 
 function capacityText(activity) {
+  if (activity.registrationRequired === false) return '无需报名'
   return activity.maxParticipants ? `${activity.registeredCount || 0}/${activity.maxParticipants} 人` : `${activity.registeredCount || 0} 人已报名`
 }
 

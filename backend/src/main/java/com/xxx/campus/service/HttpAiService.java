@@ -40,7 +40,7 @@ public class HttpAiService implements AiService {
     @Override
     public ActivityParsedResult parseActivity(String document) {
         if (!aiSettings.isConfigured()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "请先在右上角“AI 设置”中配置 API Key");
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "服务器尚未配置文字 AI，请联系管理员");
         }
         // 构建请求 body（兼容 Claude Messages API 和 DeepSeek Chat API）
         Map<String, Object> requestBody = buildRequestBody(document);

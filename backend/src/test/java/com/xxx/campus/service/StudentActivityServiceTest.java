@@ -85,6 +85,23 @@ class StudentActivityServiceTest {
     }
 
     @Test
+    void shouldShowPublishedActivityThatDoesNotRequireRegistration() {
+        ActivityParsedResult result = completeResult(false, 20);
+        result.setRegistrationRequired(false);
+        result.setMaxParticipants(null);
+        Activity published = publish(result);
+
+        assertThat(studentActivityService.listPublishedActivities("student_001", null, null, 0, 20).getContent())
+                .singleElement()
+                .satisfies(view -> {
+                    assertThat(view.getId()).isEqualTo(published.getId());
+                    assertThat(view.getRegistrationRequired()).isFalse();
+                    assertThat(view.isCanRegister()).isFalse();
+                    assertThat(view.getRegistrationNotice()).contains("无需报名");
+                });
+    }
+
+    @Test
     void shouldEnforceCapacityAndDirectlyApproveRegistration() {
         Activity published = publish(completeResult(false, 1));
 

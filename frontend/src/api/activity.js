@@ -82,34 +82,6 @@ export function resolveApiAssetUrl(value) {
   return `${configuredApiBaseUrl}${value}`
 }
 
-export async function getAiSettings() {
-  const { data } = await api.get('/ai/settings')
-  return data
-}
-
-export async function updateAiSettings(apiKey) {
-  const { data } = await api.put('/ai/settings', { apiKey })
-  return data
-}
-
-export async function clearAiSettings() {
-  await api.delete('/ai/settings')
-}
-
-export async function getImageAiSettings() {
-  const { data } = await api.get('/ai/image-settings')
-  return data
-}
-
-export async function updateImageAiSettings({ apiKey, apiUrl, model }) {
-  const { data } = await api.put('/ai/image-settings', { apiKey, apiUrl, model })
-  return data
-}
-
-export async function clearImageAiSettings() {
-  await api.delete('/ai/image-settings')
-}
-
 export async function generateCoverImage(prompt) {
   const { data } = await api.post('/ai/images/generate', { prompt }, { timeout: 180000 })
   return data
@@ -135,7 +107,15 @@ export async function disableNotificationGroup(id) {
 }
 
 export async function parseDocument(document) {
-  const { data } = await api.post('/activities/parse', { document })
+  let response
+  try {
+    response = await api.post('/activities/parse', { document })
+  } catch (error) {
+    if (![502, 503, 504].includes(error.response?.status)) throw error
+    await new Promise((resolve) => window.setTimeout(resolve, 900))
+    response = await api.post('/activities/parse', { document })
+  }
+  const { data } = response
   return data
 }
 
